@@ -1,0 +1,5 @@
+Options -Indexes
+<FilesMatch "^(database\.sql|README\.md|AUDIT\.md|\.env.*|\.git.*)$">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 "(^|/)\."
