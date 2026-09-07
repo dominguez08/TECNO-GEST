@@ -45,4 +45,3 @@ function create_report(PDO $pdo, int $equipmentId, int $userId, string $descript
         $pdo->commit(); return $id;
     } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
 }
-
