@@ -345,16 +345,26 @@ a {
   align-items:center;
   gap:10px;
   min-width:190px}
-.inventory-device img,.inventory-device-icon {
-  width:42px;
-  height:42px;
-  flex:0 0 42px;
+.inventory-device-media {
+  width:56px;
+  height:56px;
+  flex:0 0 56px;
+  display:grid;
+  place-items:center;
   border:1px solid #e4ebf3;
   border-radius:8px;
-  background:#f7faff}
-.inventory-device img {
-  object-fit:contain}
+  background:#f7faff;
+  overflow:hidden}
+.inventory-device-media img {
+  display:block;
+  width:100%;
+  height:100%;
+  padding:4px;
+  object-fit:contain;
+  object-position:center}
 .inventory-device-icon {
+  width:100%;
+  height:100%;
   display:grid;
   place-items:center;
   color:var(--blue)}
@@ -626,14 +636,25 @@ a {
   gap:28px;
   align-items:center;
   margin:24px 0}
+.equipment-image-frame {
+  width:100%;
+  aspect-ratio:4 / 3;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border:1px solid #e5edf5;
+  border-radius:10px;
+  background:#f8fbfe}
 .equipment-photo {
   width:100%;
-  height:160px;
+  height:100%;
+  padding:10px;
+  display:block;
   object-fit:contain;
-  background:#f8fbfe;
-  border-radius:10px}
+  object-position:center}
 .device-placeholder {
-  height:160px;
+  width:100%;
+  height:100%;
   display:grid;
   place-items:center;
   border-radius:10px;
@@ -840,8 +861,8 @@ a {
   grid-template-columns:1fr}
 .equipment-hero {
   grid-template-columns:1fr}
-.equipment-photo,.device-placeholder {
-  height:180px}
+.equipment-image-frame {
+  width:min(100%,260px)}
 .profile-heading {
   flex-wrap:wrap}
 .profile-heading .btn {
