@@ -64,15 +64,15 @@ def base_doc(kind):
 
 def cover(doc, document_name, subtitle):
     for _ in range(5): doc.add_paragraph()
-    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER; r = p.add_run('INVENTIC'); r.bold=True; r.font.name='Aptos Display'; r.font.size=Pt(30); r.font.color.rgb=RGBColor.from_string(BLUE)
+    p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER; r = p.add_run('InventIC-IEP San Rafael'); r.bold=True; r.font.name='Aptos Display'; r.font.size=Pt(28); r.font.color.rgb=RGBColor.from_string(BLUE)
     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER; r=p.add_run('Sistema de Inventario de Equipos'); r.font.size=Pt(15); r.font.color.rgb=RGBColor(30,30,30)
     doc.add_paragraph()
     p=doc.add_paragraph(style='Title'); p.alignment=WD_ALIGN_PARAGRAPH.CENTER; p.add_run(document_name)
     p=doc.add_paragraph(); p.alignment=WD_ALIGN_PARAGRAPH.CENTER; r=p.add_run(subtitle); r.italic=True; r.font.size=Pt(12)
     for _ in range(5): doc.add_paragraph()
     table(doc, ['Dato', 'Información'], [
-        ['Institución', 'IEP San Rafael'], ['Especialidad', 'Desarrollo de Software'], ['Proyecto', 'InventIC - TECNO-GEST'],
-        ['Integrantes', '________________________________________'], ['Docente', '________________________________________'],
+        ['Institución', 'IEP San Rafael'], ['Especialidad', 'Desarrollo de Software'], ['Proyecto', 'InventIC-IEP San Rafael'],
+        ['Integrantes', 'Jesús Ernesto Domínguez Reyes\nJosé Baltazar Beltrán Gómez'], ['Docente', 'Danilo Antonio Pérez Melara'],
         ['Versión del documento', '1.0'], ['Fecha', '9 de septiembre de 2026'],
     ], [1.8, 4.9])
     doc.add_page_break()
@@ -95,7 +95,7 @@ def user_manual():
     d=base_doc('Manual de Usuario'); cover(d, 'Manual de Usuario', 'Guía para operar el sistema institucional de inventario')
     heading(d, 'Control de versiones'); version_table(d)
     heading(d, '1 Introducción')
-    para(d, 'InventIC es una aplicación web para registrar y consultar equipos institucionales, controlar préstamos, reportar fallas y dar seguimiento al mantenimiento. Centraliza la información de los equipos por sede y ubicación para que el inventario se mantenga actualizado.')
+    para(d, 'InventIC-IEP San Rafael es una aplicación web para registrar y consultar equipos institucionales, controlar préstamos, reportar fallas y dar seguimiento al mantenimiento. Centraliza la información de los equipos por sede y ubicación para que el inventario se mantenga actualizado.')
     para(d, 'Este manual está dirigido a personal administrativo, técnico y docente. Explica las acciones disponibles de acuerdo con el perfil de acceso y utiliza los mismos nombres que aparecen en la interfaz.')
     heading(d, '2 Requisitos para utilizar el sistema')
     table(d, ['Elemento', 'Requisito'], [['Dispositivo','Computadora, laptop, tableta o teléfono con navegador moderno.'],['Navegador','Google Chrome, Microsoft Edge, Firefox o Safari actualizado.'],['Conexión','Red local o Internet según la instalación institucional.'],['Cuenta','Correo y contraseña asignados por el administrador.']], [1.4,5.2])
@@ -148,14 +148,14 @@ def user_manual():
     heading(d, '14 Recomendaciones de uso')
     bullets(d, ['No comparta su contraseña ni deje la sesión abierta en equipos compartidos.', 'Revise códigos, fechas y responsables antes de guardar.', 'Registre la devolución el mismo día en que el equipo regrese.', 'Describa las fallas con datos útiles para el técnico.', 'Conserve los respaldos fuera del servidor web y no los publique.'])
     heading(d, '15 Conclusión')
-    para(d, 'InventIC permite que las decisiones sobre equipos se basen en un inventario, préstamos y mantenimientos registrados. El uso consistente de cada módulo mantiene la información disponible para toda la institución.')
+    para(d, 'InventIC-IEP San Rafael permite que las decisiones sobre equipos se basen en un inventario, préstamos y mantenimientos registrados. El uso consistente de cada módulo mantiene la información disponible para toda la institución.')
     return d
 
 def programmer_manual():
     d=base_doc('Manual del Programador'); cover(d, 'Manual del Programador', 'Documentación técnica para instalar, mantener y ampliar InventIC')
     heading(d, 'Control de versiones'); version_table(d)
     heading(d, '1 Introducción')
-    para(d, 'InventIC - TECNO-GEST es una aplicación web institucional para inventario de equipos, préstamos, reportes de fallas y mantenimiento. Resuelve la dispersión de información sobre equipos, su ubicación, responsables, préstamos y incidencias.')
+    para(d, 'InventIC-IEP San Rafael es una aplicación web institucional para inventario de equipos, préstamos, reportes de fallas y mantenimiento. Resuelve la dispersión de información sobre equipos, su ubicación, responsables, préstamos y incidencias.')
     para(d, 'Este documento está dirigido a desarrolladores, administradores técnicos y evaluadores. Describe la versión actual del código, el esquema de datos, la instalación, las reglas de negocio y los controles de seguridad implementados.')
     heading(d, '2 Descripción general y arquitectura')
     table(d, ['Capa', 'Responsabilidad', 'Componentes'], [['Cliente','Presentación responsive e interacción de baja complejidad.','HTML5, CSS, JavaScript, Bootstrap e iconos.'],['Servidor','Rutas PHP, autorización, validación y reglas de negocio.','Módulos PHP, includes, sesiones y PDO.'],['Datos','Persistencia con relaciones y restricciones.','MySQL 8, InnoDB, utf8mb4.'],['Almacenamiento','Archivos privados y control de acceso.','storage, fotografías, sesiones, respaldos y limitador.']], [1.1,2.55,2.95])
