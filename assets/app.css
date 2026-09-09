@@ -340,6 +340,24 @@ a {
   color:var(--muted);
   display:block;
   margin-top:2px}
+.inventory-device {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:190px}
+.inventory-device img,.inventory-device-icon {
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border:1px solid #e4ebf3;
+  border-radius:8px;
+  background:#f7faff}
+.inventory-device img {
+  object-fit:contain}
+.inventory-device-icon {
+  display:grid;
+  place-items:center;
+  color:var(--blue)}
 .table {
   --bs-table-striped-bg:#f9fbfe;
   --bs-table-hover-bg:#f3f7fc}
