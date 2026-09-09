@@ -1,40 +1,59 @@
-# TECNO-GEST
+# InventIC · TECNO-GEST
 
-Inventario institucional de equipos, ubicaciones, usuarios, reportes de fallas y mantenimiento. PHP con PDO/MySQL, Bootstrap 5.3.2, Bootstrap Icons 1.11.1 y JavaScript sin framework. No requiere Composer ni Node para ejecutarse.
+Sistema institucional de inventario, préstamos, reportes de fallas y mantenimiento. Interfaz basada en las diez vistas de la referencia suministrada: panel, inventario, préstamos, mantenimiento, ubicaciones, reportes, configuración, registro de equipo, detalle y perfil.
 
 ## Requisitos
 
-PHP 8.2 o superior con `pdo_mysql`, `mbstring` y sesiones; MySQL 8 con InnoDB; Apache 2.4 con AllowOverride habilitado. Las pruebas requieren además `curl` y permisos para crear una base temporal. Bootstrap, iconos e Inter se cargan desde CDN; necesitan conexión a Internet.
+PHP 8.2+ con PDO MySQL, mbstring, fileinfo y sesiones; MySQL 8 con InnoDB; Apache 2.4 con AllowOverride habilitado. Las pruebas necesitan curl, GD y permisos para crear/eliminar bases temporales. No necesita Node ni Composer. Bootstrap 5.3.2, Bootstrap Icons 1.11.1 e Inter se cargan por CDN.
 
-## Instalación nueva
+## Instalar desde cero
 
-1. Importe `database.sql` únicamente en una base nueva. No reimporte sobre una base existente.
-2. Configure `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASS` mediante variables de entorno del servidor. Alternativamente, cree `config/local.php`, que devuelve un array con estas claves y está excluido de Git. Use un usuario de aplicación con permisos mínimos; reserve ALTER/CREATE para la migración.
-3. Configure `ADMIN_EMAIL` y `ADMIN_PASSWORD` en su entorno de consola y ejecute `php tools/create-admin.php`. La contraseña debe tener entre 12 y 72 bytes. El instalador no incluye cuentas ni contraseñas de demostración. Retire esas variables al terminar.
-4. Abra `auth/login.php` desde Apache. La ruta base se detecta automáticamente; `APP_BASE_URL` permite especificarla.
-5. El servidor debe poder escribir en `storage/` y en el directorio de sesiones PHP. Use HTTPS en producción para activar cookies Secure.
+1. Importe `database.sql` en una base nueva. Contiene doce tablas, catálogos iniciales y configuración; no incluye cuentas, contraseñas ni equipos de demostración.
+2. Configure DB_HOST, DB_PORT, DB_NAME, DB_USER y DB_PASS mediante variables del servidor o un array en `config/local.php` (excluido de Git). No coloque credenciales en archivos versionados. El usuario de producción debe tener permisos mínimos; las migraciones requieren privilegios adicionales.
+3. Configure ADMIN_EMAIL y ADMIN_PASSWORD en el entorno de consola y ejecute `php tools/create-admin.php`. La contraseña debe tener entre 12 y 72 bytes. Retire estas variables al terminar.
+4. Abra `auth/login.php` desde Apache. La ruta base se detecta automáticamente; APP_BASE_URL permite especificarla.
+5. Permita escritura del servidor en `storage/` y en el directorio de sesiones PHP. Mantenga las restricciones `.htaccess`. Use HTTPS en producción.
 
-Para desarrollo local puede usar `php -S 127.0.0.1:8000 tools/router.php`. El router bloquea directorios internos; el servidor integrado de PHP no es para producción. En Apache, mantenga todos los archivos `.htaccess`. En otro servidor, reproduzca expresamente sus restricciones.
+El huso horario predeterminado es America/El_Salvador y la sesión MySQL usa -06:00. APP_TIMEZONE y DB_TIMEZONE permiten ajustar ambos si la instalación está en otro país.
 
-## Actualizar una base existente
+Para desarrollo: `php -S 127.0.0.1:8000 tools/router.php`. No use el servidor integrado en producción. El router impide servir directorios privados. En Apache se usan `.htaccess`; en otro servidor reproduzca explícitamente sus restricciones.
 
-Ejecute `php tools/migrate.php` durante una ventana sin escrituras. Comprueba huérfanos y duplicados antes de hacer cambios, escribe un respaldo en `storage/`, convierte las ocho tablas a InnoDB y agrega relaciones e índices faltantes. No elimina ni combina datos. Se detiene si detecta datos incompatibles. El DDL de MySQL no es reversible mediante rollback: conserve el respaldo fuera del servidor web antes de intervenir una instalación de producción. Para restaurar, importe el respaldo en una base vacía y verifique sus datos antes de cambiar la conexión.
+## Actualizar una instalación existente
 
-## Funcionalidades y reglas
+No reimporte `database.sql` sobre datos existentes.
 
-- Administradores: inventario, ubicaciones, usuarios, reportes e informes; eliminación mediante POST y CSRF, bloqueada por referencias existentes. No pueden eliminar su propia cuenta ni quitarse el rol.
-- Técnicos: equipos, ubicaciones, reportes y mantenimiento; no administran usuarios ni eliminan registros.
-- Docentes: crean reportes y solo pueden leer los suyos.
-- Un reporte nuevo pone el equipo en mantenimiento. No se permiten reportes abiertos duplicados por equipo. La finalización exige solución; el equipo queda activo solo cuando no quedan reportes abiertos. Reabrir un reporte reparado limpia la fecha final; un reporte cerrado es inmutable.
-- El inventario ofrece búsqueda en servidor, categorías, ubicaciones, estados y paginación de 20 registros. En teléfonos, las tablas se presentan como tarjetas.
-- No existe un módulo de préstamos: `Inactivo` conserva su significado original y no se presenta como préstamo.
+- Desde la versión original con MyISAM: ejecute primero `php tools/migrate.php` para convertir a InnoDB y activar las relaciones.
+- Ejecute `php tools/migrate-interface.php` para incorporar sedes, préstamos, configuración, actividad y campos ampliados. Crea un respaldo SQL privado antes de modificar el esquema. La migración es idempotente y no borra información existente.
+- Realice migraciones durante una ventana sin escrituras. MySQL no revierte DDL mediante rollback. Conserve el respaldo fuera del servidor web y verifique cualquier restauración en una base nueva antes de cambiar la conexión.
 
-## Verificación
+La configuración permite descargar un respaldo SQL solamente a administradores autenticados mediante POST y CSRF. Los respaldos incluyen datos privados; nunca deben publicarse. Para una recuperación completa, copie también los archivos de fotografías de `storage/`: el SQL almacena las referencias, no las imágenes.
 
-Ejecute `php tests/integration.php`. Crea una base con nombre aleatorio, inicia un servidor temporal en `127.0.0.1:8097`, usa datos sintéticos, verifica los flujos y elimina solo su base temporal al finalizar. No modifica los registros de la base de aplicación. El puerto debe estar libre. La suite verifica 61 condiciones, incluyendo los tres roles, CRUD, CSRF, XSS, búsqueda con entrada SQL, cierre de sesión, limitación de acceso e integridad referencial.
+## Funcionalidades
 
-## Seguridad y operación
+- **Panel:** indicadores actuales, gráfico de estado, categorías, actividad reciente y próximos vencimientos. Filtro de sede con datos reales.
+- **Inventario:** búsqueda en servidor por código/nombre/modelo/marca/ubicación, filtros de categoría/sede/estado, responsable y paginación de veinte registros.
+- **Equipos:** registro y edición con responsable, ubicación, adquisición, precio, proveedor y observaciones. Fotografías JPG/PNG/WebP hasta 3 MB, almacenadas privadamente y servidas solo a roles autorizados. Detalle con información, préstamos, mantenimientos e historial.
+- **Préstamos:** registro, fechas, prestatario, vencimientos, devoluciones y filtros. Una restricción de base de datos impide dos préstamos activos sobre el mismo equipo.
+- **Mantenimiento:** fallas pendientes, en reparación y completadas; diagnóstico y solución. El cierre exige solución y es inmutable. Los equipos marcados manualmente en mantenimiento también pueden recibir su reporte.
+- **Ubicaciones:** sedes y espacios con conteos de equipos, disponibles y en mantenimiento. Edición y borrado protegidos por referencias.
+- **Reportes:** gráficos e indicadores actuales; historial de fallas filtrado por periodo. Exportación CSV compatible con Excel y vista de impresión para guardar como PDF. No se genera un archivo XLSX: la descarga se identifica como CSV.
+- **Configuración:** nombre e institución, usuarios, consulta de permisos, categorías, sedes, alertas de préstamos atrasados al iniciar sesión, respaldo SQL y densidad visual.
+- **Perfil:** nombre, correo, teléfono, cargo, sede, último acceso y cambio de contraseña con comprobación de la contraseña actual.
 
-No publique `config/local.php`, `.env`, `storage/`, respaldos ni datos personales. `.gitignore` los excluye. Las contraseñas usan `password_hash`/`password_verify`; las sesiones se regeneran al autenticar, caducan por inactividad y revalidan el rol en cada petición. Los cambios de contraseña invalidan las sesiones que se autenticaron con el hash anterior. Hay un límite local de diez intentos de acceso por IP en quince minutos; se comparte entre sesiones y puede afectar a usuarios detrás de la misma red. En despliegues con varios servidores, sustituya el almacén de archivos por uno compartido.
+Los préstamos no modifican el estado físico del equipo: su disponibilidad se calcula a partir del préstamo activo. No se puede prestar un equipo con fallas pendientes ni abrir/reabrir mantenimiento mientras siga prestado. La devolución conserva el historial. Las operaciones concurrentes usan bloqueo del equipo y transacciones.
 
-Consulte `AUDIT.md` para resultados y límites de la revisión.
+## Permisos y seguridad
+
+Administrador: todas las áreas y eliminaciones protegidas. Técnico: inventario, préstamos, ubicaciones, reportes y mantenimiento; sin usuarios, configuración ni eliminaciones. Docente: sus reportes de fallas y su perfil. No se pueden modificar los permisos desde el cliente; la pantalla de roles documenta las reglas aplicadas en servidor.
+
+Sesiones regeneradas al autenticar, HttpOnly, SameSite y Secure bajo HTTPS; caducidad por inactividad, revalidación de roles y de contraseña. CSRF en todas las escrituras. Contraseñas con password_hash/password_verify; consultas preparadas y escape de HTML. Los CSV neutralizan fórmulas. Los nombres de archivos de fotografías son aleatorios y se verifica su contenido.
+
+El acceso se limita por IP a diez intentos en quince minutos. En despliegues con varios servidores, use almacenamiento compartido para el limitador. `.gitignore` excluye configuración privada, respaldos, fotografías, sesiones y registros.
+
+## Pruebas
+
+Ejecute `php tests/integration.php`. La suite utiliza una base con nombre aleatorio, datos sintéticos y un servidor temporal en 127.0.0.1:8097. Rechaza el puerto si ya está ocupado. Comprueba 109 condiciones y elimina su base y sus archivos temporales al terminar.
+
+Verifica migraciones, integridad, roles, CRUD, préstamos, mantenimiento, carga y acceso a fotografías, perfil, configuración, CSV, restauración de respaldos, SQL Injection, XSS, CSRF y límites de autenticación. No modifica registros de la base de aplicación. La comprobación visual cubre las diez vistas en escritorio y teléfono.
+
+Consulte `AUDIT.md` para el alcance y las limitaciones de esta revisión.

@@ -1,112 +1,21 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/config.php';
-
-if (!isset($_SESSION['usuario_id'])) {
-    header("Location: " . BASE_URL . "/auth/login.php");
-    exit();
-}
-
-$rol = $_SESSION['usuario_rol'];
-$usuario_id = $_SESSION['usuario_id'];
-
-// Consultas para indicadores (Equipos en general)
-$stats = [
-    'equipos_totales' => 0,
-    'equipos_activos' => 0,
-    'equipos_inactivos' => 0,
-    'equipos_mantenimiento' => 0,
-    'mis_reportes' => 0
-];
-
-if ($rol == 'Administrador' || $rol == 'Técnico') {
-    require_once __DIR__ . '/../../includes/queries.php';
-    $counts = equipment_stats($pdo);
-    $stats['equipos_totales']=$counts['total'];
-    $stats['equipos_activos']=$counts['active'];
-    $stats['equipos_inactivos']=$counts['inactive'];
-    $stats['equipos_mantenimiento']=$counts['maintenance'];} else {
-    // Si es docente
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reportes WHERE usuario_id = ?");
-    $stmt->execute([$usuario_id]);
-    $stats['mis_reportes'] = $stmt->fetchColumn();
-}
+require __DIR__.'/../../includes/app.php';access(false);
+if(($_SESSION['usuario_rol']??'')==='Docente') {page_start('Panel','Resumen de tus reportes');$n=record('SELECT COUNT(*) total FROM reportes WHERE usuario_id=?',[$_SESSION['usuario_id']]);stats_cards([[$n['total'],'Mis reportes','blue','file-earmark-text']]);echo button_link('../reportes/create.php','Reportar una falla');page_end();exit;}
+$site=(int)($_GET['sede']??0);$c=inventory_counts($site);
+$sites=rows('SELECT id,nombre FROM sedes ORDER BY nombre');
+$actions='<form method="GET" class="search-form"><select class="form-select" name="sede" aria-label="Sede"><option value="0">Sede: Todas</option>';
+foreach($sites as $s)$actions.='<option value="'.$s['id'].'" '.($site==$s['id']?'selected':'').'>'.h($s['nombre']).'</option>';
+$actions.='</select><button class="btn btn-light">Aplicar</button></form><span class="text-muted"><i class="bi bi-calendar3"></i> '.date('d/m/Y').'</span>';
+page_start('Panel','Resumen general del inventario',$actions);inventory_cards($c);
+$categories=rows('SELECT t.nombre,COUNT(e.id) total FROM tipos_equipo t LEFT JOIN equipos e ON e.tipo_id=t.id '.($site?'AND e.ubicacion_id IN (SELECT id FROM ubicaciones WHERE sede_id=?)':'').' GROUP BY t.id,t.nombre ORDER BY total DESC',$site?[$site]:[]);
 ?>
-<?php require_once __DIR__ . '/../../includes/header.php'; ?>
-<?php require_once __DIR__ . '/../../includes/navbar.php'; ?>
-
-<div class="page-title-box">
-    <div>
-        <h1 class="page-title">Panel de Control</h1>
-        <p class="text-muted mb-0">Resumen general del estado tecnológico</p>
-    </div>
-</div>
-
-<div class="row mt-4">
-    <?php if ($rol == 'Administrador' || $rol == 'Técnico'): ?>
-
-    <div class="col-md-3 mb-4">
-        <a href="<?php echo BASE_URL; ?>/modules/equipos/index.php" class="text-decoration-none">
-            <div class="stats-card card-total h-100">
-                <p>Equipos totales</p>
-                <h3><?php echo $stats['equipos_totales']; ?></h3>
-                <div class="icon-box"><i class="bi bi-people"></i></div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-3 mb-4">
-        <a href="<?php echo BASE_URL; ?>/modules/equipos/index.php" class="text-decoration-none">
-            <div class="stats-card card-disponible h-100">
-                <p>Disponibles</p>
-                <h3><?php echo $stats['equipos_activos']; ?></h3>
-                <div class="icon-box"><i class="bi bi-check-circle"></i></div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-3 mb-4">
-        <a href="<?php echo BASE_URL; ?>/modules/equipos/index.php" class="text-decoration-none">
-            <div class="stats-card card-inactivo h-100">
-                <p>Inactivos</p>
-                <h3><?php echo $stats['equipos_inactivos']; ?></h3>
-                <div class="icon-box"><i class="bi bi-hand-thumbs-down"></i></div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-3 mb-4">
-        <a href="<?php echo BASE_URL; ?>/modules/equipos/index.php" class="text-decoration-none">
-            <div class="stats-card card-mantenimiento h-100">
-                <p>En mantenimiento</p>
-                <h3><?php echo $stats['equipos_mantenimiento']; ?></h3>
-                <div class="icon-box"><i class="bi bi-tools"></i></div>
-            </div>
-        </a>
-    </div>
-
-    <?php else: ?>
-    <!-- Vista para Docentes -->
-    <div class="col-md-6 mb-4">
-        <a href="<?php echo BASE_URL; ?>/modules/reportes/index.php" class="text-decoration-none">
-            <div class="stats-card card-total h-100">
-                <p>Mis Reportes</p>
-                <h3><?php echo $stats['mis_reportes']; ?></h3>
-                <div class="icon-box"><i class="bi bi-file-earmark-text"></i></div>
-            </div>
-        </a>
-    </div>
-    <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow-sm border-0" style="border-radius:12px;">
-            <div class="card-body text-center d-flex flex-column justify-content-center p-4">
-                <i class="bi bi-plus-circle-dotted text-muted mb-3" style="font-size: 3rem;"></i>
-                <h5 class="card-title">¿Un equipo falló?</h5>
-                <p class="card-text text-muted">Ayúdanos a mantener los equipos funcionando correctamente.</p>
-                <a href="<?php echo BASE_URL; ?>/modules/reportes/create.php" class="btn btn-dark-blue mt-auto">Crear Nuevo Reporte</a>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-</div>
-
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+<div class="panel-grid"><section class="surface"><h2>Equipos por estado</h2><?php donut($c); ?></section><section class="surface"><h2>Equipos por categoría</h2><?php bar_chart($categories); ?></section>
+<section class="surface"><h2>Actividad reciente</h2><div class="timeline"><?php
+$events=rows('SELECT a.*,u.nombre FROM actividad a LEFT JOIN usuarios u ON u.id=a.usuario_id LEFT JOIN equipos e ON e.id=a.equipo_id LEFT JOIN ubicaciones l ON l.id=e.ubicacion_id '.($site?'WHERE l.sede_id=? ':'').'ORDER BY a.fecha DESC,a.id DESC LIMIT 5',$site?[$site]:[]);
+foreach($events as $event)echo '<div class="timeline-item"><i class="bi bi-person"></i><span>'.h($event['descripcion']).'</span><small>'.date('d/m H:i',strtotime($event['fecha'])).'</small></div>';
+if(!$events)echo '<p class="text-muted">Los nuevos movimientos aparecerán aquí.</p>';
+?></div></section><section class="surface"><h2>Próximos vencimientos</h2><div class="timeline"><?php
+$due=rows('SELECT p.id,p.fecha_devolucion,e.codigo,e.nombre FROM prestamos p JOIN equipos e ON e.id=p.equipo_id JOIN ubicaciones l ON l.id=e.ubicacion_id WHERE p.devuelto_en IS NULL '.($site?'AND l.sede_id=? ':'').'ORDER BY p.fecha_devolucion LIMIT 5',$site?[$site]:[]);
+foreach($due as $p)echo '<a class="timeline-item" href="../prestamos/index.php"><i class="bi bi-calendar-event"></i><span>'.h($p['codigo'].' · '.$p['nombre']).'</span><small class="text-danger">'.h($p['fecha_devolucion']).'</small></a>';
+if(!$due)echo '<p class="text-muted">No hay préstamos pendientes de devolución.</p>';
+?></div></section></div><?php page_end(); ?>

@@ -1,70 +1,25 @@
 <?php
-$current_page = basename($_SERVER['PHP_SELF']);
-$current_dir = basename(dirname($_SERVER['PHP_SELF']));
+global $pdo;
+$settings=$pdo->query('SELECT clave,valor FROM configuracion')->fetchAll(PDO::FETCH_KEY_PAIR);
+$current_dir=basename(dirname($_SERVER['SCRIPT_NAME']));
+$isStaff=in_array($_SESSION['usuario_rol']??'',['Administrador','Técnico'],true);
+$links=[['dashboard','Panel','grid-1x2'],['equipos','Inventario','pc-display'],['prestamos','Préstamos','file-earmark'],['mantenimiento','Mantenimiento','tools'],['ubicaciones','Ubicaciones','geo-alt']];
 ?>
 <div id="wrapper">
-    <!-- Sidebar -->
-    <div id="sidebar-wrapper">
-        <a href="<?php echo BASE_URL; ?>/modules/dashboard/index.php" class="sidebar-brand">
-            <i class="bi bi-laptop"></i>
-            <div>
-                TECNO-GEST
-                <span>IEP Institucional</span>
-            </div>
-        </a>
-
-        <?php if(isset($_SESSION['usuario_id'])): ?>
-        <div class="list-group list-group-flush mt-3">
-            <a href="<?php echo BASE_URL; ?>/modules/dashboard/index.php" class="list-group-item-sidebar <?php echo ($current_dir == 'dashboard') ? 'active' : ''; ?>">
-                <i class="bi bi-grid-1x2"></i> Panel
-            </a>
-
-            <?php if($_SESSION['usuario_rol'] == 'Administrador' || $_SESSION['usuario_rol'] == 'Técnico'): ?>
-            <a href="<?php echo BASE_URL; ?>/modules/equipos/index.php" class="list-group-item-sidebar <?php echo ($current_dir == 'equipos') ? 'active' : ''; ?>">
-                <i class="bi bi-pc-display"></i> Inventario
-            </a>
-            <a href="<?php echo BASE_URL; ?>/modules/mantenimiento/index.php" class="list-group-item-sidebar <?php echo ($current_dir == 'mantenimiento') ? 'active' : ''; ?>">
-                <i class="bi bi-tools"></i> Mantenimiento
-            </a>
-            <a href="<?php echo BASE_URL; ?>/modules/ubicaciones/index.php" class="list-group-item-sidebar <?php echo ($current_dir == 'ubicaciones') ? 'active' : ''; ?>">
-                <i class="bi bi-geo-alt"></i> Ubicaciones
-            </a>
-            <?php endif; ?>
-
-            <div class="sidebar-heading mt-4">GESTIÓN</div>
-            <a href="<?php echo BASE_URL; ?>/modules/reportes/index.php" class="list-group-item-sidebar <?php echo ($current_dir == 'reportes') ? 'active' : ''; ?>">
-                <i class="bi bi-file-earmark-text"></i> Reportes
-            </a>
-
-            <?php if($_SESSION['usuario_rol'] == 'Administrador' || $_SESSION['usuario_rol'] == 'Técnico'): ?>
-            <a href="<?php echo BASE_URL; ?>/modules/estadisticas/index.php" class="list-group-item-sidebar <?php echo ($current_dir == 'estadisticas') ? 'active' : ''; ?>">
-                <i class="bi bi-bar-chart"></i> Informes
-            </a>
-            <?php endif; ?>
-
-            <?php if($_SESSION['usuario_rol'] == 'Administrador'): ?>
-            <a href="<?php echo BASE_URL; ?>/modules/usuarios/index.php" class="list-group-item-sidebar <?php echo ($current_dir == 'usuarios') ? 'active' : ''; ?>">
-                <i class="bi bi-people"></i> Usuarios
-            </a>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Page Content -->
-    <div id="page-content-wrapper">
-        <?php if(isset($_SESSION['usuario_id'])): ?>
-        <div class="top-navbar mb-4"><button class="btn btn-light mobile-menu" type="button" aria-controls="sidebar-wrapper" aria-expanded="false" id="menu-toggle"><i class="bi bi-list" aria-hidden="true"></i> Menú</button>
-            <div class="dropdown">
-                <a class="nav-link dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-person-circle"></i> <?php echo h($_SESSION['usuario_nombre']); ?>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                    <li><span class="dropdown-item-text text-muted"><?php echo h($_SESSION['usuario_rol']); ?></span></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><form method="POST" action="<?php echo BASE_URL; ?>/auth/logout.php"><?php echo csrf_field(); ?><button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button></form></li>
-                </ul>
-            </div>
-        </div>
-        <?php endif; ?>
-        <main class="p-content" id="main-content"><?php if(isset($_SESSION['flash'])): ?><div class="alert alert-info" role="status"><?php echo h($_SESSION['flash']); unset($_SESSION['flash']); ?></div><?php endif; ?>
+<aside id="sidebar-wrapper">
+<a class="sidebar-brand" href="<?php echo BASE_URL; ?>/modules/dashboard/index.php"><i class="bi bi-display"></i><div><?php echo h($settings['nombre']??'InventIC'); ?><span><?php echo h($settings['institucion']??'IEP San Rafael'); ?></span></div></a>
+<?php if(isset($_SESSION['usuario_id'])): ?>
+<nav class="sidebar-nav" aria-label="Navegación principal">
+<?php foreach($links as [$dir,$label,$icon]): if(!$isStaff&&$dir!=='dashboard')continue; ?>
+<a class="list-group-item-sidebar <?php echo $current_dir===$dir?'active':''; ?>" href="<?php echo BASE_URL.'/modules/'.$dir.'/index.php'; ?>"><i class="bi bi-<?php echo $icon; ?>"></i><?php echo $label; ?></a>
+<?php endforeach; ?>
+<div class="sidebar-heading">GESTIÓN</div>
+<?php if($isStaff): ?><a class="list-group-item-sidebar <?php echo $current_dir==='estadisticas'?'active':''; ?>" href="<?php echo BASE_URL; ?>/modules/estadisticas/index.php"><i class="bi bi-graph-up-arrow"></i>Reportes</a><?php endif; ?>
+<a class="list-group-item-sidebar <?php echo $current_dir==='reportes'?'active':''; ?>" href="<?php echo BASE_URL; ?>/modules/reportes/index.php"><i class="bi bi-exclamation-circle"></i>Reportes de fallas</a>
+<?php if(($_SESSION['usuario_rol']??'')==='Administrador'): ?><a class="list-group-item-sidebar <?php echo in_array($current_dir,['configuracion','usuarios'])?'active':''; ?>" href="<?php echo BASE_URL; ?>/modules/configuracion/index.php"><i class="bi bi-gear"></i>Configuración</a><?php endif; ?>
+</nav>
+<div class="sidebar-account"><a href="<?php echo BASE_URL; ?>/modules/perfil/index.php"><span class="avatar avatar-small"><?php echo h(mb_strtoupper(mb_substr($_SESSION['usuario_nombre'],0,1))); ?></span><span><strong><?php echo h($_SESSION['usuario_nombre']); ?></strong><small><?php echo h($_SESSION['usuario_rol']); ?></small></span></a><form method="POST" action="<?php echo BASE_URL; ?>/auth/logout.php"><?php echo csrf_field(); ?><button><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button></form></div>
+<?php endif; ?>
+</aside>
+<div id="page-content-wrapper"><div class="mobile-topbar"><button class="btn btn-light" id="menu-toggle" aria-expanded="false" aria-controls="sidebar-wrapper"><i class="bi bi-list"></i> Menú</button><strong><?php echo h($settings['nombre']??'InventIC'); ?></strong></div>
+<main class="p-content" id="main-content"><?php if(isset($_SESSION['flash'])): ?><div class="alert alert-info" role="status"><?php echo h($_SESSION['flash']);unset($_SESSION['flash']); ?></div><?php endif; ?>

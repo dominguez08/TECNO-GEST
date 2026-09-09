@@ -1,55 +1,9 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/config.php';
-
-if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] != 'Administrador' && $_SESSION['usuario_rol'] != 'Técnico')) {
-    header("Location: " . BASE_URL . "/modules/dashboard/index.php");
-    exit();
-}
-
-$stmt = $pdo->query("SELECT * FROM ubicaciones ORDER BY nombre");
-$ubicaciones = $stmt->fetchAll();
-?>
-<?php require_once __DIR__ . '/../../includes/header.php'; ?>
-<?php require_once __DIR__ . '/../../includes/navbar.php'; ?>
-
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Gestión de Ubicaciones</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="create.php" class="btn btn-sm btn-primary">
-            <i class="bi bi-plus-circle"></i> Nueva Ubicación
-        </a>
-    </div>
-</div>
-
-<div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($ubicaciones as $ubicacion): ?>
-            <tr>
-                <td><?php echo $ubicacion['id']; ?></td>
-                <td><?php echo h($ubicacion['nombre']); ?></td>
-                <td><?php echo h($ubicacion['descripcion']); ?></td>
-                <td>
-                    <a href="edit.php?id=<?php echo $ubicacion['id']; ?>" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
-                    <!-- Considerar no permitir borrar si hay equipos asociados -->
-                    <?php if($_SESSION['usuario_rol']==='Administrador'): ?><form class="d-inline" method="POST" action="delete.php" data-confirm="¿Eliminar este registro? Solo se eliminará si no tiene información asociada."><?php echo csrf_field(); ?><input type="hidden" name="id" value="<?php echo $ubicacion['id']; ?>"><button class="btn btn-sm btn-light text-danger" aria-label="Eliminar <?php echo h($ubicacion['nombre']); ?>"><i class="bi bi-trash"></i></button></form><?php endif; ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-            <?php if (count($ubicaciones) == 0): ?>
-            <tr><td colspan="4" class="text-center">No hay ubicaciones registradas</td></tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
-
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+require __DIR__.'/../../includes/app.php';access();
+$sites=rows("SELECT s.id,s.nombre,COUNT(DISTINCT e.id) equipos,COUNT(DISTINCT u.id) ubicaciones FROM sedes s LEFT JOIN ubicaciones u ON u.sede_id=s.id LEFT JOIN equipos e ON e.ubicacion_id=u.id GROUP BY s.id,s.nombre ORDER BY s.id");
+$site=(int)($_GET['sede']??($sites[0]['id']??0));
+page_start('Ubicaciones','Administra las sedes, edificios, aulas y laboratorios.',button_link('create.php','Nueva ubicación'));
+echo '<div class="site-grid">';foreach($sites as $i=>$s)echo '<a class="site-card tone-'.(['blue','green','purple','amber'][$i%4]).'" href="?sede='.$s['id'].'"><i class="bi bi-buildings"></i><div><strong>'.h($s['nombre']).'</strong><span><b>'.$s['equipos'].'</b> equipos</span><span>'.$s['ubicaciones'].' ubicaciones</span></div></a>';echo '</div>';
+$selected=record('SELECT nombre FROM sedes WHERE id=?',[$site]);echo '<h2 class="h6 fw-bold mb-3">'.h($selected['nombre']??'Ubicaciones').'</h2>';
+$list=rows("SELECT u.*,COUNT(e.id) equipos,COALESCE(SUM(e.estado='Activo' AND p.id IS NULL),0) disponibles,COALESCE(SUM(e.estado='En Mantenimiento'),0) mantenimiento FROM ubicaciones u LEFT JOIN equipos e ON e.ubicacion_id=u.id LEFT JOIN prestamos p ON p.equipo_id=e.id AND p.devuelto_en IS NULL WHERE u.sede_id=? GROUP BY u.id,u.nombre,u.descripcion,u.sede_id,u.tipo ORDER BY u.nombre",[$site]);
+?><div class="table-responsive"><table class="table-custom"><thead><tr><th>Ubicación</th><th>Tipo</th><th>Equipos</th><th>Disponibles</th><th>Mantenimientos</th><th>Acciones</th></tr></thead><tbody><?php foreach($list as $u): ?><tr><td><a href="../equipos/index.php?ubicacion=<?php echo $u['id']; ?>"><?php echo h($u['nombre']); ?></a></td><td><?php echo h($u['tipo']); ?></td><td><?php echo $u['equipos']; ?></td><td><?php echo $u['disponibles']; ?></td><td><?php echo $u['mantenimiento']; ?></td><td><div class="table-action"><a title="Editar ubicación" href="edit.php?id=<?php echo $u['id']; ?>"><i class="bi bi-pencil"></i></a><?php if($_SESSION['usuario_rol']==='Administrador'): ?><form method="POST" action="delete.php" data-confirm="¿Eliminar esta ubicación? Debe estar libre de equipos."><?php echo csrf_field(); ?><input type="hidden" name="id" value="<?php echo $u['id']; ?>"><button title="Eliminar ubicación"><i class="bi bi-trash"></i></button></form><?php endif; ?></div></td></tr><?php endforeach;if(!$list)empty_row(6,'No hay ubicaciones en esta sede.'); ?></tbody></table></div><?php page_end(); ?>

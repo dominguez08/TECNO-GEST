@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/config.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TECNO-GEST - Gestión de Equipos</title>
+    <title><?php echo h($GLOBALS['page_title'] ?? 'InventIC'); ?> · InventIC</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,4 +18,4 @@ require_once __DIR__ . '/../config/config.php';
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/app.css">
 </head>
-<body><a class="skip-link" href="#main-content">Saltar al contenido</a>
+<body class="<?php echo ($_SESSION['apariencia'] ?? '') === 'compacto' ? 'density-compact' : ''; ?>"><a class="skip-link" href="#main-content">Saltar al contenido</a>

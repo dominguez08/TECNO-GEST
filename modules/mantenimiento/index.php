@@ -1,64 +1,13 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/config.php';
-
-if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] != 'Administrador' && $_SESSION['usuario_rol'] != 'Técnico')) {
-    header("Location: " . BASE_URL . "/modules/dashboard/index.php");
-    exit();
-}
-
-$sql = "SELECT m.*, r.fecha_reporte, e.codigo, er.nombre as estado_nombre, u.nombre as tecnico_nombre
-        FROM mantenimientos m
-        JOIN reportes r ON m.reporte_id = r.id
-        JOIN equipos e ON r.equipo_id = e.id
-        JOIN estados_reporte er ON r.estado_id = er.id
-        JOIN usuarios u ON m.tecnico_id = u.id
-        ORDER BY m.fecha_inicio DESC";
-$stmt = $pdo->query($sql);
-$mantenimientos = $stmt->fetchAll();
-?>
-<?php require_once __DIR__ . '/../../includes/header.php'; ?>
-<?php require_once __DIR__ . '/../../includes/navbar.php'; ?>
-
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Historial de Mantenimientos</h1>
-</div>
-
-<div class="table-responsive">
-    <table class="table table-striped table-hover align-middle">
-        <thead class="table-dark">
-            <tr>
-                <th>ID Reporte</th>
-                <th>Equipo</th>
-                <th>Técnico</th>
-                <th>Fecha Inicio</th>
-                <th>Fecha Fin</th>
-                <th>Estado Reporte</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($mantenimientos as $m): ?>
-            <tr>
-                <td>#<?php echo $m['reporte_id']; ?></td>
-                <td><?php echo h($m['codigo']); ?></td>
-                <td><?php echo h($m['tecnico_nombre']); ?></td>
-                <td><?php echo date('d/m/Y', strtotime($m['fecha_inicio'])); ?></td>
-                <td><?php echo $m['fecha_fin'] ? date('d/m/Y', strtotime($m['fecha_fin'])) : '-'; ?></td>
-                <td><span class="badge bg-secondary"><?php echo h($m['estado_nombre']); ?></span></td>
-                <td>
-                    <a href="../reportes/view.php?id=<?php echo $m['reporte_id']; ?>" class="btn btn-sm btn-info text-white"><i class="bi bi-eye"></i></a>
-                    <?php if($m['estado_nombre'] != 'Cerrado'): ?>
-                        <a href="assign.php?reporte_id=<?php echo $m['reporte_id']; ?>" class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i></a>
-                    <?php endif; ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-            <?php if (count($mantenimientos) == 0): ?>
-            <tr><td colspan="7" class="text-center">No hay registros de mantenimiento</td></tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
-
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+require __DIR__.'/../../includes/app.php';access();$state=$_GET['estado']??'Todos';$search=trim($_GET['q']??'');
+$c=record("SELECT COALESCE(SUM(s.nombre NOT IN ('Reparado','Cerrado')),0) active,COALESCE(SUM(s.nombre='Pendiente'),0) pending,COALESCE(SUM(s.nombre IN ('En revisión','En reparación')),0) repairing,COALESCE(SUM(s.nombre IN ('Reparado','Cerrado')),0) completed FROM reportes r JOIN estados_reporte s ON s.id=r.estado_id");
+$c['active']=inventory_counts()['maintenance'];
+page_start('Mantenimiento','Control y seguimiento de equipos',button_link('create.php','Registrar mantenimiento'));stats_cards([[$c['active'],'En mantenimiento','red','tools'],[$c['pending'],'Pendientes','amber','clipboard'],[$c['repairing'],'En reparación','blue','wrench'],[$c['completed'],'Completados','green','box-seam-fill']]);
+?><form class="search-form" method="GET"><input name="estado" type="hidden" value="<?php echo h($state); ?>"><div class="search-box"><i class="bi bi-search"></i><input name="q" aria-label="Buscar mantenimiento" placeholder="Buscar mantenimiento…" value="<?php echo h($search); ?>"></div><button class="btn btn-light">Buscar</button></form><?php
+filter_tabs(['Todos','Pendientes','En reparación','Completados'],$state);
+$where=['Pendientes'=>"s.nombre='Pendiente'",'En reparación'=>"s.nombre IN ('En revisión','En reparación')",'Completados'=>"s.nombre IN ('Reparado','Cerrado')"][$state]??'1=1';$params=[];
+if($search!==''){$where.=' AND (e.codigo LIKE ? OR e.nombre LIKE ? OR r.descripcion LIKE ? OR u.nombre LIKE ?)';$params=array_fill(0,4,'%'.$search.'%');}
+$from=' FROM reportes r JOIN equipos e ON e.id=r.equipo_id JOIN estados_reporte s ON s.id=r.estado_id LEFT JOIN mantenimientos m ON m.reporte_id=r.id LEFT JOIN usuarios u ON u.id=m.tecnico_id WHERE '.$where;
+$total=(int)record('SELECT COUNT(*) total'.$from,$params)['total'];$page=min(max(1,(int)($_GET['page']??1)),max(1,(int)ceil($total/20)));
+$list=rows('SELECT r.*,e.codigo,e.nombre equipo,e.marca,e.modelo,s.nombre estado,u.nombre tecnico'.$from.' ORDER BY r.fecha_reporte DESC,r.id DESC LIMIT 20 OFFSET '.(($page-1)*20),$params);
+?><div class="table-responsive"><table class="table-custom"><thead><tr><th>Código</th><th>Equipo</th><th>Problema</th><th>Técnico</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><?php foreach($list as $r): ?><tr><td><?php echo h($r['codigo']); ?></td><td><?php echo h($r['equipo']?:$r['marca'].' '.$r['modelo']); ?></td><td><?php echo h(mb_strimwidth($r['descripcion'],0,65,'…')); ?></td><td><?php echo h($r['tecnico']??'Sin asignar'); ?></td><td><?php echo date('d/m/Y',strtotime($r['fecha_reporte'])); ?></td><td><?php echo badge(in_array($r['estado'],['Reparado','Cerrado'])?'Completado':$r['estado']); ?></td><td><div class="table-action"><a title="Ver mantenimiento" href="../reportes/view.php?id=<?php echo $r['id']; ?>"><i class="bi bi-three-dots"></i></a><?php if($r['estado']!=='Cerrado'): ?><a title="Actualizar mantenimiento" href="assign.php?reporte_id=<?php echo $r['id']; ?>"><i class="bi bi-pencil"></i></a><?php endif; ?></div></td></tr><?php endforeach;if(!$list)empty_row(7,'No hay mantenimientos en esta vista.'); ?></tbody></table></div><?php pagination($total,$page);page_end(); ?>

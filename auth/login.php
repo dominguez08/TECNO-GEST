@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/config.php';
+$GLOBALS['page_title']='Iniciar sesión';
 
 // Si ya está logueado, redirigir al dashboard
 if (isset($_SESSION['usuario_id'])) {
@@ -34,6 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['usuario_nombre'] = $usuario['nombre'];
             $_SESSION['usuario_rol'] = $usuario['rol_nombre'];
             $_SESSION['usuario_rol_id'] = $usuario['rol_id'];
+            $loginUpdate=$pdo->prepare('UPDATE usuarios SET ultimo_acceso=NOW() WHERE id=?');$loginUpdate->execute([$usuario['id']]);
+            if ($usuario['notificaciones'] && in_array($usuario['rol_nombre'],['Administrador','Técnico'],true)) {
+                $late=$pdo->query('SELECT COUNT(*) FROM prestamos WHERE devuelto_en IS NULL AND fecha_devolucion<CURRENT_DATE')->fetchColumn();
+                if ($late) $_SESSION['flash']=$late.' préstamos requieren devolución.';
+            }
 
             header("Location: " . BASE_URL . "/modules/dashboard/index.php");
             exit();
@@ -46,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <?php require_once __DIR__ . '/../includes/header.php'; ?>
 <?php require_once __DIR__ . '/../includes/navbar.php'; ?>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5">
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-6 col-xl-5">
         <div class="card shadow">
             <div class="card-header bg-primary text-white text-center">
                 <h4><i class="bi bi-person-circle"></i> Iniciar Sesión</h4>
@@ -71,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </form>
             </div>
             <div class="card-footer text-center text-muted">
-                <small>TECNO-GEST &copy; <?php echo date('Y'); ?></small>
+                <small>InventIC &copy; <?php echo date('Y'); ?></small>
             </div>
         </div>
     </div>

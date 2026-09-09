@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'America/El_Salvador');
 if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode', '1');
     session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'samesite' => 'Lax', 'path' => '/']);

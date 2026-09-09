@@ -13,6 +13,10 @@ function save_maintenance(PDO $pdo, int $reportId, int $technicianId, int $state
         $q = $pdo->prepare('SELECT nombre FROM estados_reporte WHERE id=?'); $q->execute([$stateId]); $state = $q->fetchColumn();
         if (!$state) throw new DomainException('Estado inválido.');
         $finished = in_array($state, ['Reparado','Cerrado'], true);
+        if (!$finished) {
+            $loan=$pdo->prepare('SELECT id FROM prestamos WHERE equipo_id=? AND devuelto_en IS NULL FOR UPDATE');$loan->execute([$equipmentId]);
+            if ($loan->fetchColumn()) throw new DomainException('Registre la devolución antes de reabrir el mantenimiento.');
+        }
         if ($finished && trim($solution) === '') throw new DomainException('Indique la solución antes de finalizar.');
         $q = $pdo->prepare('UPDATE reportes SET estado_id=? WHERE id=?'); $q->execute([$stateId,$reportId]);
         $q = $pdo->prepare('SELECT * FROM mantenimientos WHERE reporte_id=? FOR UPDATE'); $q->execute([$reportId]); $maintenance = $q->fetch();
@@ -27,14 +31,18 @@ function save_maintenance(PDO $pdo, int $reportId, int $technicianId, int $state
         $q = $pdo->prepare("SELECT r.id FROM reportes r JOIN estados_reporte s ON s.id=r.estado_id WHERE r.equipo_id=? AND s.nombre NOT IN ('Reparado','Cerrado') FOR UPDATE"); $q->execute([$equipmentId]);
         $equipmentState = $q->fetchColumn() ? 'En Mantenimiento' : 'Activo';
         $q = $pdo->prepare('UPDATE equipos SET estado=? WHERE id=?'); $q->execute([$equipmentState,$equipmentId]);
+        $log=$pdo->prepare('INSERT INTO actividad(usuario_id,equipo_id,descripcion) VALUES (?,?,?)');$log->execute([$technicianId,$equipmentId,'Actualizó el estado del equipo']);
         $pdo->commit();
     } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
 }
 function create_report(PDO $pdo, int $equipmentId, int $userId, string $description): int {
     $pdo->beginTransaction();
     try {
+        $loan = $pdo->prepare('SELECT id FROM equipos WHERE id=? FOR UPDATE'); $loan->execute([$equipmentId]);
+        $loan = $pdo->prepare('SELECT id FROM prestamos WHERE equipo_id=? AND devuelto_en IS NULL FOR UPDATE'); $loan->execute([$equipmentId]);
+        if ($loan->fetchColumn()) throw new DomainException('Registre la devolución del préstamo antes de abrir mantenimiento.');
         $q = $pdo->prepare('SELECT estado FROM equipos WHERE id=? FOR UPDATE'); $q->execute([$equipmentId]);
-        if ($q->fetchColumn() !== 'Activo') throw new DomainException('El equipo ya no está disponible para reportar.');
+        if (!in_array($q->fetchColumn(), ['Activo','En Mantenimiento'], true)) throw new DomainException('El equipo ya no está disponible para reportar.');
         $q = $pdo->prepare("SELECT COUNT(*) FROM reportes r JOIN estados_reporte s ON s.id=r.estado_id WHERE equipo_id=? AND s.nombre NOT IN ('Reparado','Cerrado')"); $q->execute([$equipmentId]);
         if ($q->fetchColumn()) throw new DomainException('Este equipo ya tiene un reporte abierto.');
         $state = $pdo->query("SELECT id FROM estados_reporte WHERE nombre='Pendiente'")->fetchColumn();
@@ -42,6 +50,7 @@ function create_report(PDO $pdo, int $equipmentId, int $userId, string $descript
         $q = $pdo->prepare('INSERT INTO reportes(equipo_id,usuario_id,descripcion,estado_id) VALUES (?,?,?,?)'); $q->execute([$equipmentId,$userId,$description,$state]);
         $id = (int)$pdo->lastInsertId();
         $q = $pdo->prepare("UPDATE equipos SET estado='En Mantenimiento' WHERE id=?"); $q->execute([$equipmentId]);
+        $log=$pdo->prepare('INSERT INTO actividad(usuario_id,equipo_id,descripcion) VALUES (?,?,?)');$log->execute([$userId,$equipmentId,'Reportó una falla de equipo']);
         $pdo->commit(); return $id;
     } catch (Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $e; }
 }

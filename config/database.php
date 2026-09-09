@@ -12,19 +12,22 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
+    $timezone=$pdo->prepare('SET time_zone = ?');
+    $timezone->execute([db_setting('DB_TIMEZONE', '-06:00')]);
 } catch (PDOException $e) {
     error_log('TECNO-GEST: database connection failed (' . $e->getCode() . ')');
     http_response_code(503);
     exit('No se pudo conectar con la base de datos. Revise la configuración local del servidor.');
 }
 if (PHP_SAPI !== 'cli' && isset($_SESSION['usuario_id'])) {
-    $sessionUser = $pdo->prepare('SELECT u.nombre, u.rol_id, u.password, r.nombre AS rol FROM usuarios u JOIN roles r ON r.id=u.rol_id WHERE u.id=?');
+    $sessionUser = $pdo->prepare('SELECT u.nombre, u.rol_id, u.password, u.apariencia, r.nombre AS rol FROM usuarios u JOIN roles r ON r.id=u.rol_id WHERE u.id=?');
     $sessionUser->execute([$_SESSION['usuario_id']]);
     $currentUser = $sessionUser->fetch();
     if (!$currentUser || (isset($_SESSION['auth_version']) && !hash_equals($_SESSION['auth_version'], hash('sha256', $currentUser['password']))) || !in_array($currentUser['rol'], ['Administrador', 'Técnico', 'Docente'], true)) {
         session_unset();
         header('Location: ' . BASE_URL . '/auth/login.php'); exit;
     }
+    $_SESSION['apariencia'] = $currentUser['apariencia'];
     $_SESSION['usuario_nombre'] = $currentUser['nombre'];
     $_SESSION['usuario_rol'] = $currentUser['rol'];
     $_SESSION['usuario_rol_id'] = $currentUser['rol_id'];

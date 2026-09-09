@@ -1,40 +1,45 @@
-# Auditoría y modernización — 7 de septiembre de 2026
+# Revisión de InventIC — 8 de septiembre de 2026
 
-## Estado inicial
+## Resultado
 
-24 archivos PHP y un esquema SQL, sin repositorio Git local, sin gestor de dependencias, sin pruebas automatizadas. El repositorio remoto indicado estaba vacío. La aplicación usa páginas PHP renderizadas en servidor, PDO y consultas mayormente preparadas, con roles Administrador, Técnico y Docente. La conexión local funcionaba. Las ocho tablas existían, pero usaban MyISAM: las claves foráneas declaradas no estaban activas y los bloques de transacción no protegían las escrituras.
+Se adaptó la aplicación PHP/PDO a las diez interfaces de la nueva referencia, manteniendo la navegación y las funciones previas. La base local se amplió de ocho a doce tablas sin borrar sus registros: sedes, préstamos, configuración y actividad. Se realizó respaldo privado antes de la migración. Los números y gráficos usan información real; no se agregaron equipos ni usuarios ficticios a la instalación local.
 
-## Correcciones
+## Correcciones relevantes
 
-- Migración local de las ocho tablas a InnoDB, ocho claves foráneas verificadas y respaldo SQL privado previo. Mismos conteos antes y después: un usuario, un equipo, una ubicación, cero reportes y cero mantenimientos; catálogos preservados.
-- Índices para estado/código, fecha de reportes y equipo/estado; unicidad de mantenimiento por reporte y de nombres de ubicaciones. No se eliminaron tablas, columnas ni registros existentes.
-- Servicio compartido de reportes/mantenimiento con bloqueo de equipo, transacciones, rechazo de duplicados, fechas coherentes y comprobación de otros reportes abiertos antes de activar equipos.
-- Eliminación de equipos, ubicaciones y usuarios protegida por rol, método POST, CSRF y claves foráneas; se preservan referencias e historial. Bloqueo de autoeliminación y de cambio del propio rol administrativo.
-- Validación de identificadores, catálogos, tamaños, estados, correos y contraseñas en servidor. Escape centralizado de HTML, incluidos campos nulos y etiquetas de catálogo.
-- Sesiones con regeneración, HttpOnly, SameSite, Secure bajo HTTPS, caducidad por inactividad y revalidación de roles. Cierre de sesión por POST. Invalidación tras cambiar contraseña para nuevas autenticaciones.
-- Protección CSRF en todos los formularios POST, límite de intentos de autenticación por IP y respuestas que no exponen excepciones SQL.
-- Configuración privada separada del código, exclusiones Git y bloqueos web para archivos internos. Semilla de administrador con contraseña conocida retirada del instalador.
-- Indicadores de inventario reducidos de cuatro consultas a una. Búsqueda y filtros en servidor con consultas preparadas y paginación; corrección de estadísticas que agrupaban personas distintas con el mismo nombre.
-- CSS extraído a un recurso compartido, sidebar azul, tarjetas pastel, filtros, actividad real reciente, formularios y botones consistentes. Adaptación a escritorio, tablet y teléfono con tablas en formato tarjeta. Menú móvil accesible y enlace para saltar al contenido.
+La revisión anterior corrigió MyISAM sin transacciones/relaciones efectivas, falta de CSRF, validaciones insuficientes y errores de mantenimiento. Esta revisión incorpora reglas para préstamos activos, evita reabrir mantenimiento de un equipo prestado y permite registrar la falla de un equipo marcado manualmente en mantenimiento.
 
-## Archivos
+Se detectó y corrigió la restauración de respaldos con columnas generadas: el INSERT excluye únicamente las columnas STORED/VIRTUAL GENERATED, conservando las fechas con DEFAULT_GENERATED. Los respaldos se probaron restaurándolos en otra base temporal.
 
-Se revisaron y modificaron los módulos de dashboard, equipos, ubicaciones, usuarios, reportes, mantenimiento e informes; auth/login.php y logout.php; config/config.php y database.php; includes/header.php, navbar.php y footer.php; database.sql. Se agregaron assets/app.css y app.js, helpers compartidos en includes/, endpoints delete.php, herramientas de migración/administrador/router, pruebas de integración, documentación, .gitignore y restricciones .htaccess. config/local.php y el respaldo permanecen exclusivamente locales.
+Los formularios ampliados validan precio, fechas, referencias, tamaño de textos y contenido de fotografías. Los archivos se almacenan con nombres aleatorios en almacenamiento privado. La exportación CSV escapa fórmulas para evitar su ejecución al abrirla en Excel. Se unificaron el huso horario de PHP y de la conexión MySQL para calcular los vencimientos.
 
-## Verificación realizada
+Se corrigió el acceso a perfil/cierre de sesión desde el menú móvil, la visualización de valores cero en gráficos y el renderizado de la navegación compartida dentro de las nuevas plantillas.
 
-- Todos los PHP pasan validación sintáctica con PHP 8.2.
-- 61 comprobaciones automatizadas en una base MySQL temporal: creación del esquema, transacciones reales, integridad referencial, mantenimiento, rutas, los tres roles, formularios de equipos/usuarios/ubicaciones/reportes, CSRF, XSS, entrada SQL en búsqueda, logout, borrado protegido y limitación de intentos.
-- Revisión visual en navegador a tamaño de escritorio, 820 px y 390 px. Menú móvil comprobado; tarjetas sin desbordamiento horizontal de la página. Consola sin errores observados durante esta revisión.
-- Apache devuelve 403/404 al solicitar .git/config, config/local.php, database.sql, storage/, tools/migrate.php y tests/integration.php.
-- Conteos de datos locales y ocho relaciones verificados después de las pruebas. Las pruebas usan datos sintéticos y limpian su propia base.
+## Interfaz
 
-## Límites y pendientes operativos
+Sidebar azul con identidad InventIC, usuario y cierre de sesión en el pie. Tarjetas pastel, tablas con filas redondeadas, formularios agrupados, iconografía y espaciados consistentes. Panel con gráficos y actividad; inventario con responsable; préstamos con vencimientos y devoluciones; mantenimiento con indicadores; sedes con tarjetas; reportes con gráficos y exportaciones; configuración con ocho accesos; registro ampliado; ficha con cuatro pestañas; perfil editable.
 
-La cuenta administradora local conserva la contraseña de demostración previa: debe reemplazarse desde Usuarios antes de producción. No se modificó la credencial del usuario sin proporcionar una nueva. La conexión local mantiene la configuración de desarrollo fuera de Git; producción necesita usuario MySQL limitado, HTTPS y configuración propia.
+En teléfonos, navegación desplegable, formularios en una columna y filas de tabla convertidas en tarjetas. La apariencia compacta se guarda por usuario. Las tarjetas de configuración mantienen la distribución de la referencia en escritorio.
 
-No se implementó un módulo de préstamos porque no existía: las etiquetas erróneas que equiparaban Inactivo con préstamo se corrigieron. No se inventaron movimientos ni actividad.
+## Archivos principales
 
-La carga de CDN sigue siendo externa. No se actualizó el stack WAMP del equipo ni se hizo una prueba de carga a gran escala; los listados administrativos y de reportes todavía no tienen paginación. No se realizó una auditoría de infraestructura ni una prueba de penetración externa. Las verificaciones descritas no garantizan ausencia absoluta de fallos.
+- assets/app.css; includes/header.php, navbar.php y app.php: componentes visuales y navegación.
+- includes/schema.php y tools/migrate-interface.php: migración y respaldo. database.sql: instalación nueva sin datos privados.
+- includes/loans.php y modules/prestamos/: préstamos y devoluciones.
+- includes/equipment-form.php y modules/equipos/: formulario reutilizable, ficha y fotografía protegida.
+- includes/location-form.php y modules/ubicaciones/: sedes y espacios.
+- includes/maintenance.php y modules/mantenimiento/: consistencia de mantenimiento.
+- modules/dashboard/, estadisticas/, configuracion/, perfil/ y reportes/create.php: vistas y flujos ampliados.
+- auth/login.php, config/config.php y database.php: último acceso, preferencias y zona horaria.
+- tests/integration.php: regresión y pruebas nuevas; README.md: instalación y operación.
 
-El repositorio se inicializa con una base documental mínima en main para permitir revisar toda la aplicación mediante un Pull Request desde improvement/security-ui. Los hashes y enlace del PR se entregan con el resumen final.
+## Validación
+
+109 comprobaciones de integración en datos temporales: esquema e idempotencia, transacciones, referencias, los tres roles, formularios, duplicados, préstamos/devoluciones, mantenimiento, permisos, perfil, contraseñas, configuración, fotografía, CSV, restauración, CSRF, XSS y SQL Injection. Sintaxis PHP revisada. Se verificaron visualmente panel, registro, configuración, reportes y perfil en escritorio; las diez vistas se recorrieron a 390 px sin desbordamiento horizontal. No se observaron errores de consola en ese recorrido.
+
+## Límites operativos
+
+La contraseña original de demostración de la cuenta local se conserva; puede cambiarse desde Mi perfil. El instalador público no crea esa cuenta ni distribuye su contraseña. La conexión privada local sigue siendo de desarrollo: producción necesita HTTPS y permisos mínimos de base de datos.
+
+PDF usa la impresión del navegador para guardar como PDF. Excel se entrega como CSV, no como XLSX. Los gráficos de inventario son actuales; el filtro temporal aplica al historial de fallas. Roles/permisos son de consulta y se asignan por usuario; no hay editor de políticas arbitrarias. Las alertas son internas al iniciar sesión, no correos electrónicos.
+
+Las librerías visuales siguen en CDN. No se actualizó WAMP ni se realizó una auditoría externa de infraestructura o una prueba de carga masiva. Los respaldos SQL no contienen los archivos binarios de las fotografías: copie storage por separado para recuperación completa.

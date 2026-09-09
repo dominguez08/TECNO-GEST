@@ -1,103 +1,13 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/config.php';
-
-if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] != 'Administrador' && $_SESSION['usuario_rol'] != 'Técnico')) {
-    header("Location: " . BASE_URL . "/modules/dashboard/index.php");
-    exit();
+require __DIR__.'/../../includes/app.php';access();
+$days=in_array((int)($_GET['dias']??30),[7,30,90,365],true)?(int)($_GET['dias']??30):30;
+$c=inventory_counts();$categories=rows('SELECT t.nombre,COUNT(e.id) total FROM tipos_equipo t LEFT JOIN equipos e ON e.tipo_id=t.id GROUP BY t.id,t.nombre ORDER BY total DESC');
+$sites=rows('SELECT s.nombre,COUNT(e.id) total FROM sedes s LEFT JOIN ubicaciones u ON u.sede_id=s.id LEFT JOIN equipos e ON e.ubicacion_id=u.id GROUP BY s.id,s.nombre ORDER BY s.id');
+$frequent=rows('SELECT e.id,e.codigo,e.nombre,e.marca,e.modelo,COUNT(r.id) total FROM equipos e JOIN reportes r ON r.equipo_id=e.id WHERE r.fecha_reporte>=DATE_SUB(NOW(),INTERVAL '.$days.' DAY) GROUP BY e.id,e.codigo,e.nombre,e.marca,e.modelo ORDER BY total DESC LIMIT 10');
+if(($_GET['export']??'')==='csv'){
+    header('Content-Type: text/csv; charset=UTF-8');header('Content-Disposition: attachment; filename="InventIC-inventario-'.date('Y-m-d').'.csv"');echo "\xEF\xBB\xBF";$out=fopen('php://output','w');fputcsv($out,['Código','Equipo','Categoría','Ubicación','Sede','Estado'],';');
+    foreach(rows('SELECT e.codigo,e.nombre,e.marca,e.modelo,t.nombre categoria,u.nombre ubicacion,s.nombre sede,'.equipment_status_sql().' estado'.equipment_from().' ORDER BY e.codigo') as $r){$values=[$r['codigo'],$r['nombre']?:$r['marca'].' '.$r['modelo'],$r['categoria'],$r['ubicacion'],$r['sede'],$r['estado']];$values=array_map(fn($v)=>preg_match('/^[=+@\-\t\r]/',(string)$v)?"'".$v:$v,$values);fputcsv($out,$values,';');}fclose($out);exit;
 }
-
-// 1. Equipos por estado
-$stmtEst = $pdo->query("SELECT estado, COUNT(*) as total FROM equipos GROUP BY estado");
-$equipos_estado = $stmtEst->fetchAll();
-
-// 2. Reportes por técnico
-$stmtTec = $pdo->query("
-    SELECT u.nombre, COUNT(m.id) as total
-    FROM mantenimientos m
-    JOIN usuarios u ON m.tecnico_id = u.id
-    GROUP BY u.id, u.nombre
-");
-$mantenimientos_tecnico = $stmtTec->fetchAll();
-
-// 3. Fallas por ubicación
-$stmtUbi = $pdo->query("
-    SELECT u.nombre, COUNT(r.id) as total
-    FROM reportes r
-    JOIN equipos e ON r.equipo_id = e.id
-    JOIN ubicaciones u ON e.ubicacion_id = u.id
-    GROUP BY u.id, u.nombre
-    ORDER BY total DESC
-");
-$fallas_ubicacion = $stmtUbi->fetchAll();
-?>
-<?php require_once __DIR__ . '/../../includes/header.php'; ?>
-<?php require_once __DIR__ . '/../../includes/navbar.php'; ?>
-
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Informes Estadísticos</h1>
-    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
-        <i class="bi bi-printer"></i> Imprimir Informe
-    </button>
-</div>
-
-<div class="row">
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-dark text-white">Equipos por Estado</div>
-            <div class="card-body">
-                <table class="table table-sm">
-                    <thead><tr><th>Estado</th><th>Total</th></tr></thead>
-                    <tbody>
-                        <?php foreach($equipos_estado as $e): ?>
-                        <tr>
-                            <td><?php echo $e['estado']; ?></td>
-                            <td><strong><?php echo $e['total']; ?></strong></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-dark text-white">Reportes Atendidos por Técnico</div>
-            <div class="card-body">
-                <table class="table table-sm">
-                    <thead><tr><th>Técnico</th><th>Atendidos</th></tr></thead>
-                    <tbody>
-                        <?php foreach($mantenimientos_tecnico as $t): ?>
-                        <tr>
-                            <td><?php echo h($t['nombre']); ?></td>
-                            <td><strong><?php echo $t['total']; ?></strong></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-dark text-white">Fallas Reportadas por Ubicación</div>
-            <div class="card-body">
-                <table class="table table-sm">
-                    <thead><tr><th>Ubicación</th><th>Nº Fallas</th></tr></thead>
-                    <tbody>
-                        <?php foreach($fallas_ubicacion as $u): ?>
-                        <tr>
-                            <td><?php echo h($u['nombre']); ?></td>
-                            <td><strong><?php echo $u['total']; ?></strong></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+$actions='<form method="GET" class="search-form"><select name="dias" class="form-select" aria-label="Periodo">';foreach([7,30,90,365] as $d)$actions.='<option value="'.$d.'" '.($days===$d?'selected':'').'>Últimos '.$d.' días</option>';$actions.='</select><button class="btn btn-light">Aplicar</button></form><div class="report-actions"><button class="btn btn-dark-blue" onclick="window.print()"><i class="bi bi-file-earmark-pdf"></i> Exportar PDF</button>'.button_link('?export=csv&dias='.$days,'Exportar Excel (CSV)','download').'</div>';
+page_start('Reportes','Estadísticas y análisis del inventario',$actions);stats_cards([[$c['total'],'Equipos','blue','people'],[round($c['active']/max(1,$c['total'])*100).'%','Disponibilidad','green','check-circle'],[$c['loaned'],'Préstamos','amber','hand-index-thumb'],[$c['maintenance'],'Mantenimientos','red','tools']]);
+?><div class="panel-grid three"><section class="surface"><h2>Estado de equipos</h2><?php donut($c); ?></section><section class="surface"><h2>Equipos por categoría</h2><?php bar_chart($categories); ?></section><section class="surface"><h2>Equipos por sede</h2><?php bar_chart($sites); ?></section></div><div class="panel-grid mt-3"><section class="surface"><h2>Equipos con más mantenimientos · últimos <?php echo $days; ?> días</h2><div class="table-responsive"><table class="table-custom"><thead><tr><th>Equipo</th><th>Código</th><th>Reportes</th></tr></thead><tbody><?php foreach($frequent as $e)echo '<tr><td>'.h($e['nombre']?:$e['marca'].' '.$e['modelo']).'</td><td><a href="../equipos/view.php?id='.$e['id'].'">'.h($e['codigo']).'</a></td><td>'.$e['total'].'</td></tr>';if(!$frequent)empty_row(3,'No hay fallas reportadas en este periodo.'); ?></tbody></table></div></section><section class="surface"><h2>Resumen</h2><div class="timeline-item"><i class="bi bi-file-earmark-text" style="font-size:34px"></i><p class="text-muted mb-0">Consulta el estado actual del inventario y los equipos que requieren más atención. El periodo seleccionado se aplica al historial de fallas; los indicadores representan el estado actual.</p></div><p class="form-text mt-4">Exportar PDF abre la vista de impresión para guardar como PDF. Excel descarga un CSV compatible con Excel.</p></section></div><?php page_end(); ?>

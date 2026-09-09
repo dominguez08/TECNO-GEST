@@ -1,91 +1,10 @@
 <?php
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/config.php';
-
-if (!isset($_SESSION['usuario_id']) || ($_SESSION['usuario_rol'] != 'Administrador' && $_SESSION['usuario_rol'] != 'Técnico')) {
-    header("Location: " . BASE_URL . "/modules/dashboard/index.php");
-    exit();
+require __DIR__.'/../../includes/app.php';require __DIR__.'/../../includes/maintenance.php';access();$id=(int)($_GET['reporte_id']??0);$r=record('SELECT r.*,e.codigo,e.nombre,s.nombre estado FROM reportes r JOIN equipos e ON e.id=r.equipo_id JOIN estados_reporte s ON s.id=r.estado_id WHERE r.id=?',[$id]);if(!$r)redirect_to('index.php');$m=record('SELECT * FROM mantenimientos WHERE reporte_id=?',[$id]);$error='';
+if($_SERVER['REQUEST_METHOD']==='POST'&&!($error=validate_form($pdo,'mantenimiento'))) {
+    try{save_maintenance($pdo,$id,(int)$_SESSION['usuario_id'],(int)$_POST['estado_id'],trim($_POST['diagnostico']),trim($_POST['solucion']));redirect_to('../reportes/view.php?id='.$id,'Mantenimiento actualizado.');}
+    catch(DomainException $e){$error=$e->getMessage();}catch(Throwable $e){$error='No se pudo actualizar el mantenimiento.';}
 }
-
-$reporte_id = $_GET['reporte_id'] ?? null;
-if (!$reporte_id) {
-    header("Location: index.php");
-    exit();
-}
-
-// Obtener detalles del reporte
-$stmtRep = $pdo->prepare("SELECT * FROM reportes WHERE id = ?");
-$stmtRep->execute([$reporte_id]);
-$reporte = $stmtRep->fetch();
-
-if (!$reporte) {
-    header("Location: index.php");
-    exit();
-}
-
-// Obtener mantenimiento si ya existe
-$stmtMant = $pdo->prepare("SELECT * FROM mantenimientos WHERE reporte_id = ?");
-$stmtMant->execute([$reporte_id]);
-$mantenimiento = $stmtMant->fetch();
-
-$estados = $pdo->query("SELECT * FROM estados_reporte ORDER BY id")->fetchAll();
-$error = '';
-$success = '';
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && !($error = validate_form($pdo, 'mantenimiento'))) {
-    $estado_id = $_POST['estado_id'];
-    $diagnostico = trim($_POST['diagnostico']);
-    $solucion = trim($_POST['solucion']);
-
-    require_once __DIR__ . '/../../includes/maintenance.php';
-    try {
-        save_maintenance($pdo, (int)$reporte_id, (int)$_SESSION['usuario_id'], (int)$estado_id, $diagnostico, $solucion);
-        header('Location: ../reportes/view.php?id=' . (int)$reporte_id); exit;
-    } catch (DomainException $e) { $error = $e->getMessage(); }
-      catch (Throwable $e) { $error = 'No se pudo guardar el mantenimiento.'; }
-}
-?>
-<?php require_once __DIR__ . '/../../includes/header.php'; ?>
-<?php require_once __DIR__ . '/../../includes/navbar.php'; ?>
-
-<div class="pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Gestión de Mantenimiento - Reporte #<?php echo $reporte_id; ?></h1>
-</div>
-
-<div class="card shadow-sm">
-    <div class="card-body">
-        <?php if($error): ?>
-            <div class="alert alert-danger"><?php echo h($error); ?></div>
-        <?php endif; ?>
-        <?php if($success): ?>
-            <div class="alert alert-success"><?php echo h($success); ?></div>
-        <?php endif; ?>
-
-        <form method="POST" action=""><?php echo csrf_field(); ?>
-            <div class="mb-3">
-                <label for="estado_id" class="form-label">Estado del Reporte *</label>
-                <select class="form-select" id="estado_id" name="estado_id" required>
-                    <?php foreach($estados as $est): ?>
-                        <option value="<?php echo $est['id']; ?>" <?php echo ($est['id'] == $reporte['estado_id']) ? 'selected' : ''; ?>>
-                            <?php echo h($est['nombre']); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="form-text">El equipo vuelve a estar activo cuando no quedan reportes abiertos. Un reporte cerrado no puede modificarse.</div>
-            </div>
-            <div class="mb-3">
-                <label for="diagnostico" class="form-label">Diagnóstico del Técnico</label>
-                <textarea class="form-control" id="diagnostico" name="diagnostico" rows="3"><?php echo $mantenimiento ? h($mantenimiento['diagnostico']) : ''; ?></textarea>
-            </div>
-            <div class="mb-3">
-                <label for="solucion" class="form-label">Solución Aplicada</label>
-                <textarea class="form-control" id="solucion" name="solucion" rows="3"><?php echo $mantenimiento ? h($mantenimiento['solucion']) : ''; ?></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Actualizar Mantenimiento</button>
-            <a href="../reportes/view.php?id=<?php echo $reporte_id; ?>" class="btn btn-secondary">Ver Detalle Completo</a>
-            <a href="index.php" class="btn btn-outline-secondary">Volver al Historial</a>
-        </form>
-    </div>
-</div>
-
-<?php require_once __DIR__ . '/../../includes/footer.php'; ?>
+page_start('Actualizar mantenimiento',$r['codigo'].' · Reporte #'.$id,button_link('index.php','Mantenimiento','arrow-left','btn-light'));if($error)echo '<div class="alert alert-danger">'.h($error).'</div>';
+?><section class="surface mb-3"><h2>Problema reportado</h2><p class="mb-0"><?php echo nl2br(h($r['descripcion'])); ?></p></section>
+<?php if($r['estado']==='Cerrado'): ?><div class="alert alert-info">Este reporte está cerrado. Su historial se conserva y no puede modificarse.</div><?php else: ?>
+<form method="POST"><?php echo csrf_field(); ?><section class="form-section"><h2>Seguimiento técnico</h2><?php select_field('estado_id','Estado del reporte',rows('SELECT id,nombre FROM estados_reporte ORDER BY id'),$_POST['estado_id']??$r['estado_id'],true); ?><div class="field-grid mt-3"><div><label for="diagnostico" class="form-label">Diagnóstico</label><textarea name="diagnostico" id="diagnostico" class="form-control" rows="5" maxlength="16000"><?php echo h($_POST['diagnostico']??$m['diagnostico']??''); ?></textarea></div><div><label for="solucion" class="form-label">Solución aplicada</label><textarea name="solucion" id="solucion" class="form-control" rows="5" maxlength="16000"><?php echo h($_POST['solucion']??$m['solucion']??''); ?></textarea></div></div><p class="form-text mt-3">Indica la solución antes de marcar como reparado o cerrado. El equipo se libera cuando no quedan fallas abiertas.</p></section><div class="form-footer"><?php echo button_link('../reportes/view.php?id='.$id,'Ver detalle','eye','btn-light'); ?><button class="btn btn-dark-blue">Guardar mantenimiento</button></div></form><?php endif;page_end(); ?>
