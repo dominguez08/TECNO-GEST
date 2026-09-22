@@ -1,0 +1,19 @@
+{
+  "devDependencies": {
+    "playwright": "^1.63.0",
+    "prettier": "^3.9.8"
+  },
+  "dependencies": {
+    "mysql2": "^3.24.4"
+  },
+  "name": "inventic",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Inventario institucional con HTML, JavaScript y MySQL",
+  "scripts": {
+    "start": "node tools/start.cjs",
+    "server": "node server/index.cjs",
+    "format": "prettier --write \"assets/*.{js,css}\" \"server/*.cjs\" \"tools/*.cjs\" \"tests/*.cjs\" \"modules/**/*.html\" \"auth/*.html\" index.html",
+    "test": "node tests/mysql-smoke.cjs"
+  }
+}

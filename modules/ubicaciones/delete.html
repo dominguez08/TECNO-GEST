@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>InventIC</title>
+  </head>
+  <body>
+    <p><a id="destination" href="../../index.html#/ubicaciones/index">Abrir InventIC</a></p>
+    <script>
+      const dest = document.getElementById('destination');
+      dest.href += location.search;
+      location.replace(dest.href);
+    </script>
+  </body>
+</html>

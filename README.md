@@ -1,59 +1,64 @@
-# InventIC · TECNO-GEST
+# InventIC
 
-Sistema institucional de inventario, préstamos, reportes de fallas y mantenimiento. Interfaz basada en las diez vistas de la referencia suministrada: panel, inventario, préstamos, mantenimiento, ubicaciones, reportes, configuración, registro de equipo, detalle y perfil.
+Sistema de inventario institucional con interfaz HTML, CSS y JavaScript, servidor Node.js y base de datos MySQL. No utiliza PHP.
 
-## Requisitos
+## Cómo iniciar
 
-PHP 8.2+ con PDO MySQL, mbstring, fileinfo y sesiones; MySQL 8 con InnoDB; Apache 2.4 con AllowOverride habilitado. Las pruebas necesitan curl, GD y permisos para crear/eliminar bases temporales. No necesita Node ni Composer. Bootstrap 5.3.2, Bootstrap Icons 1.11.1 e Inter se cargan por CDN.
+1. Ejecuta `Iniciar InventIC.cmd` o `npm start` desde esta carpeta.
+2. Abre **http://localhost:3000**.
+3. En el primer acceso, crea tu cuenta administradora con nombre, correo y contraseña. No hay credenciales predeterminadas.
+4. En los siguientes accesos, inicia sesión con esa cuenta.
 
-## Instalar desde cero
+El iniciador usa MySQL 8 de WAMP y una instancia independiente en el puerto 3307. La base nueva se llama `inventic_html`; sus archivos están en `mysql-data/`. No modifica la base anterior de WAMP. La conexión del servidor se configura en `.env`. `MYSQL_BIN` permite indicar otra ubicación de `mysqld.exe`.
 
-1. Importe `database.sql` en una base nueva. Contiene doce tablas, catálogos iniciales y configuración; no incluye cuentas, contraseñas ni equipos de demostración.
-2. Configure DB_HOST, DB_PORT, DB_NAME, DB_USER y DB_PASS mediante variables del servidor o un array en `config/local.php` (excluido de Git). No coloque credenciales en archivos versionados. El usuario de producción debe tener permisos mínimos; las migraciones requieren privilegios adicionales.
-3. Configure ADMIN_EMAIL y ADMIN_PASSWORD en el entorno de consola y ejecute `php tools/create-admin.php`. La contraseña debe tener entre 12 y 72 bytes. Retire estas variables al terminar.
-4. Abra `auth/login.php` desde Apache. La ruta base se detecta automáticamente; APP_BASE_URL permite especificarla.
-5. Permita escritura del servidor en `storage/` y en el directorio de sesiones PHP. Mantenga las restricciones `.htaccess`. Use HTTPS en producción.
+La aplicación debe abrirse desde el servidor Node, no haciendo doble clic en `index.html` ni desde el puerto de Apache: los formularios necesitan la API para consultar y guardar información en MySQL. Mantén abierta la consola mientras uses la aplicación.
 
-El huso horario predeterminado es America/El_Salvador y la sesión MySQL usa -06:00. APP_TIMEZONE y DB_TIMEZONE permiten ajustar ambos si la instalación está en otro país.
+## Funciones
 
-Para desarrollo: `php -S 127.0.0.1:8000 tools/router.php`. No use el servidor integrado en producción. El router impide servir directorios privados. En Apache se usan `.htaccess`; en otro servidor reproduzca explícitamente sus restricciones.
+- Acceso con correo y contraseña, creación de la primera cuenta y cierre de sesión.
+- Usuarios con roles Administrador, Técnico y Docente. Los permisos de escritura se revisan también en el servidor.
+- Panel, inventario, fotografías, registro y edición de equipos.
+- Préstamos, devoluciones, fallas y mantenimiento.
+- Configuración separada en General, Usuarios y roles, Categorías, Sedes y Respaldos.
+- Edición de perfil, apariencia y cambio de contraseña con comprobación de la contraseña actual.
+- Búsqueda, filtros, exportación CSV e impresión de reportes.
+- Respaldos JSON de registros y configuración. No contienen contraseñas. Las fotografías iniciales utilizan `assets/images/`; las imágenes subidas se incluyen en los datos. Conserva también esa carpeta al trasladar el proyecto.
 
-## Actualizar una instalación existente
+Al restaurar, las contraseñas de las cuentas existentes se conservan por identificador. Para cuentas restauradas que no existían, el administrador debe asignar nuevas contraseñas desde Usuarios. El respaldo debe conservar la cuenta administradora que realiza la operación.
 
-No reimporte `database.sql` sobre datos existentes.
+## Organización del código
 
-- Desde la versión original con MyISAM: ejecute primero `php tools/migrate.php` para convertir a InnoDB y activar las relaciones.
-- Ejecute `php tools/migrate-interface.php` para incorporar sedes, préstamos, configuración, actividad y campos ampliados. Crea un respaldo SQL privado antes de modificar el esquema. La migración es idempotente y no borra información existente.
-- Realice migraciones durante una ventana sin escrituras. MySQL no revierte DDL mediante rollback. Conserve el respaldo fuera del servidor web y verifique cualquier restauración en una base nueva antes de cambiar la conexión.
+| Archivo o carpeta | Función |
+| --- | --- |
+| `index.html` | Página principal y carga de archivos |
+| `assets/app.js` | Vistas, formularios y navegación |
+| `assets/auth.js` | Solicitudes de inicio y cierre de sesión |
+| `assets/store.js` | Lectura y guardado mediante la API |
+| `assets/validation.js` | Validaciones compartidas por cliente y servidor |
+| `assets/*.css` | Estilos, componentes y diseño adaptable |
+| `assets/images/` | Fotografías del catálogo inicial |
+| `server/index.cjs` | Servidor HTTP, sesiones y rutas de la API |
+| `server/database.cjs` | Consultas y transacciones MySQL |
+| `server/permissions.cjs` | Reglas de acceso por rol |
+| `server/security.cjs` | Cálculo y comprobación de contraseñas |
+| `database.sql` | Tablas, claves y relaciones de la base nueva |
+| `tools/start.cjs` | Inicio de MySQL y del servidor |
+| `tests/mysql-smoke.cjs` | Pruebas en una base temporal independiente |
 
-La configuración permite descargar un respaldo SQL solamente a administradores autenticados mediante POST y CSRF. Los respaldos incluyen datos privados; nunca deben publicarse. Para una recuperación completa, copie también los archivos de fotografías de `storage/`: el SQL almacena las referencias, no las imágenes.
+Los archivos están indentados y organizados en varias líneas. `npm run format` aplica el formato definido en `.prettierrc.json`.
 
-## Funcionalidades
+## Datos y seguridad
 
-- **Panel:** indicadores actuales, gráfico de estado, categorías, actividad reciente y próximos vencimientos. Filtro de sede con datos reales.
-- **Inventario:** búsqueda en servidor por código/nombre/modelo/marca/ubicación, filtros de categoría/sede/estado, responsable y paginación de veinte registros.
-- **Equipos:** registro y edición con responsable, ubicación, adquisición, precio, proveedor y observaciones. Fotografías JPG/PNG/WebP hasta 3 MB, almacenadas privadamente y servidas solo a roles autorizados. Detalle con información, préstamos, mantenimientos e historial.
-- **Préstamos:** registro, fechas, prestatario, vencimientos, devoluciones y filtros. Una restricción de base de datos impide dos préstamos activos sobre el mismo equipo.
-- **Mantenimiento:** fallas pendientes, en reparación y completadas; diagnóstico y solución. El cierre exige solución y es inmutable. Los equipos marcados manualmente en mantenimiento también pueden recibir su reporte.
-- **Ubicaciones:** sedes y espacios con conteos de equipos, disponibles y en mantenimiento. Edición y borrado protegidos por referencias.
-- **Reportes:** gráficos e indicadores actuales; historial de fallas filtrado por periodo. Exportación CSV compatible con Excel y vista de impresión para guardar como PDF. No se genera un archivo XLSX: la descarga se identifica como CSV.
-- **Configuración:** nombre e institución, usuarios, consulta de permisos, categorías, sedes, alertas de préstamos atrasados al iniciar sesión, respaldo SQL y densidad visual.
-- **Perfil:** nombre, correo, teléfono, cargo, sede, último acceso y cambio de contraseña con comprobación de la contraseña actual.
+El catálogo inicial contiene los 23 equipos recuperados del proyecto y sus fotografías. No se importaron automáticamente las cuentas o el historial de la base anterior. Los respaldos SQL y archivos antiguos permanecen en `storage/`.
 
-Los préstamos no modifican el estado físico del equipo: su disponibilidad se calcula a partir del préstamo activo. No se puede prestar un equipo con fallas pendientes ni abrir/reabrir mantenimiento mientras siga prestado. La devolución conserva el historial. Las operaciones concurrentes usan bloqueo del equipo y transacciones.
+Los datos de trabajo se guardan en MySQL, no en `localStorage`. Las contraseñas se almacenan con scrypt y una sal individual. La sesión usa una cookie HttpOnly y caduca a las ocho horas. Reiniciar el servidor requiere iniciar sesión nuevamente. Las transacciones revierten los cambios si una operación falla; una revisión de datos impide sobrescribir silenciosamente cambios de otra sesión.
 
-## Permisos y seguridad
-
-Administrador: todas las áreas y eliminaciones protegidas. Técnico: inventario, préstamos, ubicaciones, reportes y mantenimiento; sin usuarios, configuración ni eliminaciones. Docente: sus reportes de fallas y su perfil. No se pueden modificar los permisos desde el cliente; la pantalla de roles documenta las reglas aplicadas en servidor.
-
-Sesiones regeneradas al autenticar, HttpOnly, SameSite y Secure bajo HTTPS; caducidad por inactividad, revalidación de roles y de contraseña. CSRF en todas las escrituras. Contraseñas con password_hash/password_verify; consultas preparadas y escape de HTML. Los CSV neutralizan fórmulas. Los nombres de archivos de fotografías son aleatorios y se verifica su contenido.
-
-El acceso se limita por IP a diez intentos en quince minutos. En despliegues con varios servidores, use almacenamiento compartido para el limitador. `.gitignore` excluye configuración privada, respaldos, fotografías, sesiones y registros.
+Esta instalación escucha únicamente en la computadora local. No publiques `.env`, `.runtime/`, `mysql-data/` ni `storage/`. Para un despliegue remoto hacen falta configuración del servidor y HTTPS; no basta con copiar los HTML a un alojamiento estático.
 
 ## Pruebas
 
-Ejecute `php tests/integration.php`. La suite utiliza una base con nombre aleatorio, datos sintéticos y un servidor temporal en 127.0.0.1:8097. Rechaza el puerto si ya está ocupado. Comprueba 109 condiciones y elimina su base y sus archivos temporales al terminar.
+Requisitos de desarrollo: Node.js, MySQL activo, Playwright disponible y Edge instalado (o `TEST_BROWSER=chrome`). El entorno actual dispone de Playwright en el runtime de Codex. En otro entorno se puede instalar como dependencia de desarrollo.
 
-Verifica migraciones, integridad, roles, CRUD, préstamos, mantenimiento, carga y acceso a fotografías, perfil, configuración, CSV, restauración de respaldos, SQL Injection, XSS, CSRF y límites de autenticación. No modifica registros de la base de aplicación. La comprobación visual cubre las diez vistas en escritorio y teléfono.
+Ejecuta `npm test`. La prueba crea una base `inventic_test_<fecha>`, arranca otro servidor y comprueba acceso, sesión, permisos, configuración, inventario, préstamos, mantenimiento, usuarios, respaldo y diseño móvil. Elimina solo esa base temporal al terminar; no modifica `inventic_html`.
 
-Consulte `AUDIT.md` para el alcance y las limitaciones de esta revisión.
+Los documentos históricos restantes pueden describir versiones anteriores del proyecto. Este README corresponde a la versión actual.

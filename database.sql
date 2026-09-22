@@ -1,7 +1,4 @@
--- New installation only. For existing databases use tools/migrate-interface.php.
-CREATE DATABASE IF NOT EXISTS tecnogest CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE tecnogest;
-
+-- Esquema MySQL de InventIC. La instalación crea una base nueva.
 CREATE TABLE `sedes` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nombre` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -69,7 +66,7 @@ CREATE TABLE `equipos` (
   `precio` decimal(12,2) DEFAULT NULL,
   `proveedor` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `observaciones` text COLLATE utf8mb4_unicode_ci,
-  `fotografia` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fotografia` longtext COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `codigo` (`codigo`),
   KEY `fk_equipos_tipo_id` (`tipo_id`),
@@ -161,10 +158,11 @@ CREATE TABLE `actividad` (
   CONSTRAINT `actividad_ibfk_2` FOREIGN KEY (`equipo_id`) REFERENCES `equipos` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO roles(nombre) VALUES ('Administrador'),('Técnico'),('Docente');
-INSERT INTO estados_reporte(nombre) VALUES ('Pendiente'),('En revisión'),('En reparación'),('Reparado'),('Cerrado');
-INSERT INTO tipos_equipo(nombre) VALUES ('Computadora de Escritorio'),('Laptop'),('Impresora'),('Proyector'),('Router'),('Switch');
-INSERT INTO sedes(nombre) VALUES ('Sede San Rafael');
-INSERT INTO ubicaciones(nombre,descripcion,sede_id,tipo) VALUES ('Laboratorio 1','Laboratorio principal de informática',1,'Laboratorio');
-INSERT INTO configuracion(clave,valor) VALUES ('nombre','InventIC'),('institucion','IEP San Rafael'),('moneda','USD');
--- Create an administrator with tools/create-admin.php. No default password is distributed.
+CREATE TABLE app_metadata (
+  id INT PRIMARY KEY,
+  revision INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+
+INSERT INTO app_metadata (id, revision) VALUES (1, 0);
+INSERT INTO roles (id, nombre) VALUES (1, 'Administrador'), (2, 'Técnico'), (3, 'Docente');
+INSERT INTO estados_reporte (id, nombre) VALUES (1, 'Pendiente'), (2, 'En revisión'), (3, 'En reparación'), (4, 'Reparado'), (5, 'Cerrado');

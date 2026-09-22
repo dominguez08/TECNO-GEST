@@ -1,4 +1,5 @@
 Options -Indexes
+DirectoryIndex index.html
 <FilesMatch "^(database\.sql|README\.md|AUDIT\.md|\.env.*|\.git.*)$">
     Require all denied
 </FilesMatch>

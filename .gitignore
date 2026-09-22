@@ -7,3 +7,8 @@ storage/*
 *.log
 /vendor/
 /node_modules/
+.mysql-data/
+mysql-data/
+.runtime/
+test-results/
+test-results*/
