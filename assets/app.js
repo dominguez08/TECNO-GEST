@@ -679,7 +679,7 @@ ${esc(value)}</textarea>
   function settingsPage() {
     const tab = params.get('tab') || 'general';
     const tabs = [
-      ['general', 'General'],
+      ['general', 'Apariencia'],
       ['usuarios', 'Usuarios y roles'],
       ['categorias', 'Categorías'],
       ['sedes', 'Sedes'],
@@ -693,30 +693,12 @@ ${esc(value)}</textarea>
     if (tab === 'general') {
       content = html`<div class="settings-layout">
         <section class="surface settings-main">
-          <h2>Datos de la institución</h2>
-          <p class="section-description">
-            Estos datos se mostrarán en la navegación y en los reportes.
-          </p>
-          ${form(
-            'configuracion',
-            field(
-              'nombre',
-              'Nombre del sistema',
-              db.configuracion.nombre,
-              'text',
-              true,
-              'maxlength="50"'
-            ) +
-              field(
-                'institucion',
-                'Institución',
-                db.configuracion.institucion,
-                'text',
-                true,
-                'maxlength="100"'
-              ) +
-              select('moneda', 'Moneda', ['USD', 'EUR'], db.configuracion.moneda || 'USD', true)
-          )}
+          <h2>Apariencia</h2>
+          <p class="section-description">Elige cómo ver InventIC en este dispositivo.</p>
+          <div class="theme-options" role="group" aria-label="Tema de la aplicación">
+            <button type="button" class="btn btn-light" data-theme-choice="light">Claro</button>
+            <button type="button" class="btn btn-light" data-theme-choice="dark">Oscuro</button>
+          </div>
         </section>
         <aside class="surface settings-summary">
           <h2>Tu organización</h2>

@@ -22,6 +22,7 @@ const adminPassword = JSON.parse(
   });
   let browser;
   let server;
+  let liveServer;
   let serverOutput = '';
   try {
     await install(sql, databaseName);
@@ -143,13 +144,13 @@ const adminPassword = JSON.parse(
       assert.equal(duplicates, 0, route + ' tiene identificadores repetidos');
     }
     await visit('configuracion/index', 'Configuración');
-    await page.getByLabel('Nombre del sistema *').fill('InventIC Pruebas');
-    await page.getByLabel('Institución *').fill('Instituto de prueba');
-    await save();
-    await page.getByRole('status').waitFor();
+    assert.equal(await page.getByLabel('Nombre del sistema *').count(), 0);
+    await page.getByRole('button', { name: 'Oscuro', exact: true }).click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
     await page.reload();
-    await page.getByLabel('Nombre del sistema *').waitFor();
-    assert.equal(await page.getByLabel('Nombre del sistema *').inputValue(), 'InventIC Pruebas');
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+    await page.getByRole('button', { name: 'Claro', exact: true }).click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
     await shot('configuracion');
     await visit('configuracion/index?tab=categorias', 'Configuración');
     await page.getByLabel('Nombre *', { exact: true }).fill('Categoría nueva');
@@ -249,13 +250,11 @@ const adminPassword = JSON.parse(
     const backup = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
     assert.equal(backup.equipos.length, 24);
     assert.ok(backup.usuarios.every((user) => !user.password));
-    await page
-      .locator('#backup')
-      .setInputFiles({
-        name: 'backup.json',
-        mimeType: 'application/json',
-        buffer: Buffer.from(JSON.stringify(backup))
-      });
+    await page.locator('#backup').setInputFiles({
+      name: 'backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(backup))
+    });
     await page.getByRole('button', { name: 'Importar respaldo' }).click();
     await page.getByRole('heading', { name: 'Iniciar sesión', exact: true }).waitFor();
     await login();
@@ -267,6 +266,10 @@ const adminPassword = JSON.parse(
       await visit(route, heading);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await shot('mobile-' + route.split('/')[0]);
+      await page.getByRole('button', { name: '☾ Modo oscuro', exact: true }).click();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await shot('mobile-dark-' + route.split('/')[0]);
+      await page.getByRole('button', { name: '☀ Modo claro', exact: true }).click();
     }
     await page.getByRole('button', { name: '☰ Menú' }).click();
     assert.ok(await page.locator('#sidebar-wrapper').isVisible());
@@ -280,6 +283,40 @@ const adminPassword = JSON.parse(
     const second = await browser.newContext();
     assert.equal((await second.request.get(base + '/api/data')).status(), 401);
     await second.close();
+    // Comprueba cookies y preflight desde Live Server con ambos nombres locales.
+    liveServer = require('node:http').createServer((request, response) => {
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.end('<!doctype html><title>Live Server</title>');
+    });
+    await new Promise((resolve, reject) => {
+      liveServer.once('error', reject);
+      liveServer.listen(5500, '127.0.0.1', resolve);
+    });
+    for (const hostname of ['127.0.0.1', 'localhost']) {
+      const live = await browser.newContext();
+      const livePage = await live.newPage();
+      livePage.on('requestfailed', (request) => console.error(request.url(), request.failure()));
+      livePage.on('console', (message) => {
+        if (message.type() === 'error') console.error(message.text());
+      });
+      await livePage.goto(`http://${hostname}:5500/index.html`);
+      for (const filename of ['validation.js', 'auth.js', 'store.js']) {
+        const source = fs.readFileSync(path.join(root, 'assets', filename), 'utf8');
+        await livePage.addScriptTag({ content: source.replaceAll(':3000/api', `:${port}/api`) });
+      }
+      const result = await livePage.evaluate(async () => {
+        await InventicAuth.signIn({ email: 'admin@example.test', password: 'Prueba123!' });
+        const session = await InventicAuth.load();
+        const email = session.user.email;
+        const data = await InventicStore.load();
+        await InventicStore.write(data);
+        await InventicAuth.signOut();
+        return { email, loggedOut: !(await InventicAuth.load()).user };
+      });
+      assert.equal(result.email, 'admin@example.test');
+      assert.equal(result.loggedOut, true);
+      await live.close();
+    }
     const [records] = await sql.query('SELECT COUNT(*) AS total FROM equipos');
     assert.equal(records[0].total, 24);
     const [passwords] = await sql.query('SELECT password FROM usuarios');
@@ -293,6 +330,7 @@ const adminPassword = JSON.parse(
     if (serverOutput) console.error(serverOutput);
     process.exitCode = 1;
   } finally {
+    if (liveServer) await new Promise((resolve) => liveServer.close(resolve));
     if (browser) await browser.close();
     if (server) {
       server.kill();

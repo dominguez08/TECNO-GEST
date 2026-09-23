@@ -83,18 +83,25 @@ const server = http.createServer(async (request, response) => {
     if (url.pathname.startsWith('/api/')) {
       const origin = request.headers.origin;
       const allowedOrigins = new Set([
-        'http://localhost:3000',
+        `http://localhost:${port}`,
         'http://localhost:5500',
-        'http://127.0.0.1:3000',
+        `http://127.0.0.1:${port}`,
         'http://127.0.0.1:5500'
       ]);
       if (allowedOrigins.has(origin)) {
         response.setHeader('Access-Control-Allow-Origin', origin);
         response.setHeader('Access-Control-Allow-Credentials', 'true');
         response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
         response.setHeader('Vary', 'Origin');
       }
-      if (request.method === 'OPTIONS') return send(response, 204, null);
+      if (request.method === 'OPTIONS') {
+        if (!allowedOrigins.has(origin)) {
+          return send(response, 403, { error: 'Origen de la solicitud no permitido.' });
+        }
+        response.writeHead(204);
+        return response.end();
+      }
       if (request.method !== 'GET') {
         if (
           !allowedOrigins.has(origin) ||

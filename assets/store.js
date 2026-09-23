@@ -2,7 +2,10 @@
 
 window.InventicStore = (() => {
   let data = { usuarios: [], configuracion: {} };
-  const apiBase = window.location.port === '3000' ? '/api/data' : 'http://localhost:3000/api/data';
+  const apiBase =
+    window.location.port === '5500'
+      ? `http://${window.location.hostname}:3000/api/data`
+      : '/api/data';
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const validate = window.InventicValidate;
 

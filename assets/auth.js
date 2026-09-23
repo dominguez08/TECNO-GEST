@@ -2,7 +2,8 @@
 
 window.InventicAuth = (() => {
   let session = { user: null, setup: false, settings: {} };
-  const apiBase = window.location.port === '3000' ? '/api/' : 'http://localhost:3000/api/';
+  const apiBase =
+    window.location.port === '5500' ? `http://${window.location.hostname}:3000/api/` : '/api/';
 
   async function request(path, values) {
     let response;
