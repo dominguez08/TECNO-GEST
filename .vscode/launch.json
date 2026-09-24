@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Iniciar InventIC (servidor y navegador)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/start.cjs",
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole",
+      "autoAttachChildProcesses": true,
+      "serverReadyAction": {
+        "pattern": "InventIC (?:ya está )?disponible en (http://localhost:[0-9]+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      },
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

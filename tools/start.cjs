@@ -16,6 +16,14 @@ function portOpen(port) {
 }
 
 async function start() {
+  const envFile = path.join(root, '.env');
+  if (!fs.existsSync(envFile)) {
+    throw Error(
+      'Falta la configuración .env. Configura la conexión MySQL siguiendo README.md antes de iniciar.'
+    );
+  }
+  process.loadEnvFile(envFile);
+  const appPort = Number(process.env.PORT || 3000);
   if (!(await portOpen(3307))) {
     const executable = process.env.MYSQL_BIN || 'C:/wamp64/bin/mysql/mysql8.0.31/bin/mysqld.exe';
     if (!fs.existsSync(executable))
@@ -43,8 +51,19 @@ async function start() {
   }
 
   if (process.argv.includes('--database-only')) return;
-  if (await portOpen(3000)) {
-    console.log('InventIC ya está disponible en http://localhost:3000');
+  if (await portOpen(appPort)) {
+    const response = await fetch(`http://127.0.0.1:${appPort}/api/session`, {
+      signal: AbortSignal.timeout(5000)
+    });
+    const session = response.headers.get('content-type')?.includes('application/json')
+      ? await response.json()
+      : null;
+    if (!response.ok || !session || !Object.hasOwn(session, 'setup')) {
+      throw Error(
+        `El puerto ${appPort} está ocupado o la base de datos no responde. Revisa la consola del servidor.`
+      );
+    }
+    console.log(`InventIC ya está disponible en http://localhost:${appPort}`);
     return;
   }
   const child = spawn(process.execPath, [path.join(root, 'server/index.cjs')], {
@@ -54,6 +73,10 @@ async function start() {
   });
   child.on('exit', (code) => {
     process.exitCode = code || 0;
+  });
+  child.on('error', (error) => {
+    console.error('No se pudo iniciar Node: ' + error.message);
+    process.exitCode = 1;
   });
 }
 

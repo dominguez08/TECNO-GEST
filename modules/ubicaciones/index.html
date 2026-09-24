@@ -2,15 +2,41 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>InventIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="../../" />
+    <title>Ubicaciones · InventIC</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/app.css" />
+    <link rel="stylesheet" href="assets/static.css" />
+    <link rel="stylesheet" href="assets/interface.css" />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="assets/theme.js"></script>
+    <script src="assets/api.js" defer></script>
+    <script src="assets/views.js" defer></script>
+    <script src="assets/validation.js" defer></script>
+    <script src="assets/store.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/app.js" defer></script>
   </head>
-  <body>
-    <p><a id="destination" href="../../index.html#/ubicaciones/index">Abrir InventIC</a></p>
-    <script>
-      const dest = document.getElementById('destination');
-      dest.href += location.search;
-      location.replace(dest.href);
-    </script>
+  <body data-page="ubicaciones/index">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div id="app">
+      <main class="surface connection-error">
+        <h1>Ubicaciones</h1>
+        <p>Cargando datos…</p>
+      </main>
+    </div>
+    <template id="contenido">
+      <header class="page-title-box">
+        <div>
+          <h1 class="page-title">Ubicaciones</h1>
+          <p>Sedes y espacios del inventario</p>
+        </div>
+        <div class="page-actions">{{link}}</div>
+      </header>
+      <div class="site-grid">{{contenido}}</div>
+      {{table}}
+    </template>
+    <noscript>Activa JavaScript para consultar los datos del inventario.</noscript>
   </body>
 </html>

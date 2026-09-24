@@ -1,0 +1,13 @@
+{
+  "folders": [{ "path": "." }],
+  "settings": {
+    "editor.tabSize": 2,
+    "editor.wordWrap": "on",
+    "files.exclude": {
+      "mysql-data": true,
+      ".mysql-data": true,
+      "node_modules": true,
+      ".runtime": true
+    }
+  }
+}

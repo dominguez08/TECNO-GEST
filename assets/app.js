@@ -1,5 +1,6 @@
 'use strict';
 (() => {
+  const view = window.InventicViews.render;
   const store = window.InventicStore;
   const auth = window.InventicAuth;
   const html = (parts, ...values) =>
@@ -38,30 +39,34 @@
     db.reportes.find((r) => String(r.equipo_id) === String(id) && Number(r.estado_id) < 4);
   const available = (e) => e.estado === 'Activo' && !activeLoan(e.id) && !openReport(e.id);
   const status = (e) => (activeLoan(e.id) ? 'Prestado' : e.estado);
-  const badge = (value) =>
-    html`<span class="status-badge status-${esc(value.replaceAll(' ', '-'))}"
-      >${esc(value === 'Activo' ? 'Disponible' : value)}</span
-    >`;
+  const badge = (value) => html`
+    <span class="status-badge status-${esc(value.replaceAll(' ', '-'))}">
+      ${esc(value === 'Activo' ? 'Disponible' : value)}
+    </span>
+  `;
   const url = (r, a = 'index', id = '') =>
     `#/${r}/${a}${id ? '?id=' + encodeURIComponent(id) : ''}`;
-  const link = (r, text, a = 'index', id = '', cls = 'btn btn-light') =>
-    html`<a class="${cls}" href="${url(r, a, id)}">${esc(text)}</a>`;
-  const button = (text, act, id = '', cls = 'btn btn-light') =>
-    html`<button type="button" class="${cls}" data-action="${act}" data-id="${esc(id)}">
+  const link = (r, text, a = 'index', id = '', cls = 'btn btn-light') => html`
+    <a class="${cls}" href="${url(r, a, id)}">${esc(text)}</a>
+  `;
+  const button = (text, act, id = '', cls = 'btn btn-light') => html`
+    <button type="button" class="${cls}" data-action="${act}" data-id="${esc(id)}">
       ${esc(text)}
-    </button>`;
-  const title = (text, subtitle = '', actions = '') =>
-    html`<div class="page-title-box">
+    </button>
+  `;
+  const title = (text, subtitle = '', actions = '') => html`
+    <div class="page-title-box">
       <div>
         <h1 class="page-title">${esc(text)}</h1>
         <p>${esc(subtitle)}</p>
       </div>
       <div class="page-actions">${actions}</div>
-    </div>`;
-  const field = (key, label, value = '', type = 'text', required = false, extra = '') =>
-    html`<div class="field">
-      <label for="${key}">${esc(label)}${required ? ' *' : ''}</label
-      ><input
+    </div>
+  `;
+  const field = (key, label, value = '', type = 'text', required = false, extra = '') => html`
+    <div class="field">
+      <label for="${key}">${esc(label)}${required ? ' *' : ''}</label>
+      <input
         class="form-control"
         id="${key}"
         name="${key}"
@@ -70,52 +75,72 @@
         ${required ? 'required' : ''}
         ${extra}
       />
-    </div>`;
-  const select = (key, label, options, value = '', required = false) =>
-    html`<div class="field">
-      <label for="${key}">${esc(label)}${required ? ' *' : ''}</label
-      ><select class="form-select" id="${key}" name="${key}" ${required ? 'required' : ''}>
+    </div>
+  `;
+  const select = (key, label, options, value = '', required = false) => html`
+    <div class="field">
+      <label for="${key}">${esc(label)}${required ? ' *' : ''}</label>
+      <select class="form-select" id="${key}" name="${key}" ${required ? 'required' : ''}>
         <option value="">Seleccionar</option>
         ${options
           .map((o) => {
             const id = typeof o === 'string' ? o : o.id;
             const label = typeof o === 'string' ? o : o.nombre;
-            return html`<option
-              value="${esc(id)}"
-              ${String(id) === String(value) ? 'selected' : ''}
-            >
-              ${esc(label)}
-            </option>`;
+            return html`
+              <option value="${esc(id)}" ${String(id) === String(value) ? 'selected' : ''}>
+                ${esc(label)}
+              </option>
+            `;
           })
           .join('')}
       </select>
-    </div>`;
-  const area = (key, label, value = '') =>
-    html`<div class="field field-wide">
-      <label for="${key}">${esc(label)}</label
-      ><textarea class="form-control" id="${key}" name="${key}" maxlength="4000">
+    </div>
+  `;
+  function selectOptions(options, value) {
+    return options
+      .map((option) => {
+        const id = typeof option === 'string' ? option : option.id;
+        const label = typeof option === 'string' ? option : option.nombre;
+        const selected = String(id) === String(value) ? ' selected' : '';
+        return '<option value="' + esc(id) + '"' + selected + '>' + esc(label) + '</option>';
+      })
+      .join('');
+  }
+  const area = (key, label, value = '') => html`
+    <div class="field field-wide">
+      <label for="${key}">${esc(label)}</label>
+      <textarea class="form-control" id="${key}" name="${key}" maxlength="4000">
 ${esc(value)}</textarea>
-    </div>`;
+    </div>
+  `;
   function form(type, fields, cancel = route, id = '') {
     const prefix = type + '-' + (id || 'new') + '-';
     const uniqueFields = fields.replace(
       /(id|for)="([^"]+)"/g,
       (_, attribute, value) => `${attribute}="${prefix}${value}"`
     );
-    return html`<form data-form="${type}" data-id="${esc(id)}">
-      <div class="field-grid">${uniqueFields}</div>
-      <div class="form-footer">
-        ${link(cancel, 'Cancelar')}
-        <button class="btn btn-primary" type="submit">Guardar</button>
-      </div>
-    </form>`;
+    return html`
+      <form data-form="${type}" data-id="${esc(id)}">
+        <div class="field-grid">${uniqueFields}</div>
+        <div class="form-footer">
+          ${link(cancel, 'Cancelar')}
+          <button class="btn btn-primary" type="submit">Guardar</button>
+        </div>
+      </form>
+    `;
   }
-  const table = (headers, rows) =>
-    html`<div class="table-responsive">
+  const table = (headers, rows) => html`
+    <div class="table-responsive">
       <table class="table-custom">
         <thead>
           <tr>
-            ${headers.map((h) => html`<th scope="col">${esc(h)}</th>`).join('')}
+            ${headers
+              .map(
+                (h) => html`
+                  <th scope="col">${esc(h)}</th>
+                `
+              )
+              .join('')}
           </tr>
         </thead>
         <tbody>
@@ -123,50 +148,68 @@ ${esc(value)}</textarea>
             rows.length
               ? rows
                   .map(
-                    (row) =>
-                      html`<tr>
-                        ${row.map((cell, i) => html`<td data-label="${esc(headers[i])}">${cell}</td>`).join('')}
-                      </tr>`
+                    (row) => html`
+                      <tr>
+                        ${row
+                          .map(
+                            (cell, i) => html`
+                              <td data-label="${esc(headers[i])}">${cell}</td>
+                            `
+                          )
+                          .join('')}
+                      </tr>
+                    `
                   )
                   .join('')
-              : html`<tr>
-                  <td class="empty-state" colspan="${headers.length}">
-                    No hay registros para mostrar.
-                  </td>
-                </tr>`
+              : html`
+                  <tr>
+                    <td class="empty-state" colspan="${headers.length}">
+                      No hay registros para mostrar.
+                    </td>
+                  </tr>
+                `
           }
         </tbody>
       </table>
-    </div>`;
-  const metric = (n, label, tone) =>
-    html`<div class="metric-card tone-${tone}">
-      <strong>${n}</strong><span>${esc(label)}</span>
-    </div>`;
-  const details = (pairs) =>
-    html`<dl class="detail-grid">
+    </div>
+  `;
+  const metric = (n, label, tone) => html`
+    <div class="metric-card tone-${tone}">
+      <strong>${n}</strong>
+      <span>${esc(label)}</span>
+    </div>
+  `;
+  const details = (pairs) => html`
+    <dl class="detail-grid">
       ${pairs
         .map(
-          ([a, b]) =>
-            html`<div>
+          ([a, b]) => html`
+            <div>
               <dt>${esc(a)}</dt>
               <dd>${esc(b ?? '—')}</dd>
-            </div>`
+            </div>
+          `
         )
         .join('')}
-    </dl>`;
+    </dl>
+  `;
   const photo = (e) =>
     /^(assets\/images\/[a-z0-9-]+\.jpg)$/.test(e.fotografia || '') ||
     /^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(e.fotografia || '')
-      ? html`<img class="equipment-photo" src="${esc(e.fotografia)}" alt="${esc(e.nombre)}" />`
+      ? html`
+          <img class="equipment-photo" src="${esc(e.fotografia)}" alt="${esc(e.nombre)}" />
+        `
       : '<span class="device-symbol" aria-hidden="true">▣</span>';
   const notice = (text, error = false) => {
     const el = document.getElementById('message');
-    el.innerHTML = html`<div
-      class="alert ${error ? 'alert-danger' : 'alert-success'}"
-      role="${error ? 'alert' : 'status'}"
-    >
-      ${esc(text)}
-    </div>`;
+    el.innerHTML = html`
+      <div
+        class="alert ${error ? 'alert-danger' : 'alert-success'}"
+        role="${error ? 'alert' : 'status'}"
+      >
+        ${esc(text)}
+      </div>
+    `;
     el.scrollIntoView({ block: 'nearest' });
   };
   const requireRow = (tableName) => {
@@ -202,9 +245,13 @@ ${esc(value)}</textarea>
     else location.hash = dest;
   }
   function filters(fields) {
-    return html`<form data-form="filters" class="filter-form">
-      ${fields}<button class="btn btn-primary">Filtrar</button>${link(route, 'Limpiar')}
-    </form>`;
+    return html`
+      <form data-form="filters" class="filter-form">
+        ${fields}
+        <button class="btn btn-primary">Filtrar</button>
+        ${link(route, 'Limpiar')}
+      </form>
+    `;
   }
   function matchingEquipment() {
     const q = (params.get('q') || '').toLowerCase();
@@ -237,7 +284,8 @@ ${esc(value)}</textarea>
     const loans = db.prestamos.filter(
       (p) => !p.devuelto_en && equipment.some((e) => String(e.id) === String(p.equipo_id))
     );
-    return html`<div class="metric-grid">
+    return html`
+      <div class="metric-grid">
         ${metric(equipment.length, 'Equipos registrados', 'purple')}${metric(equipment.filter(available).length, 'Disponibles', 'green')}${metric(loans.length, 'Préstamos activos', 'amber')}${metric(equipment.filter((e) => e.estado === 'En Mantenimiento').length, 'En mantenimiento', 'red')}
       </div>
       <div class="panel-grid">
@@ -247,12 +295,15 @@ ${esc(value)}</textarea>
             ${db.tipos_equipo
               .map((t) => {
                 const count = equipment.filter((e) => String(e.tipo_id) === String(t.id)).length;
-                return html`<div class="chart-line">
-                  <span>${esc(t.nombre)}</span
-                  ><progress max="${Math.max(1, equipment.length)}" value="${count}">
-                    ${count}</progress
-                  ><b>${count}</b>
-                </div>`;
+                return html`
+                  <div class="chart-line">
+                    <span>${esc(t.nombre)}</span>
+                    <progress max="${Math.max(1, equipment.length)}" value="${count}">
+                      ${count}
+                    </progress>
+                    <b>${count}</b>
+                  </div>
+                `;
               })
               .join('')}
           </div>
@@ -271,164 +322,167 @@ ${esc(value)}</textarea>
               ])
           )}
         </section>
-      </div>`;
+      </div>
+    `;
   }
   function dashboard() {
-    return (
-      title(
-        'Panel',
-        'Resumen del inventario institucional',
-        isStaff() ? link('equipos', 'Registrar equipo', 'create', '', 'btn btn-primary') : ''
-      ) +
-      filters(select('sede_id', 'Sede', db.sedes, params.get('sede_id'))) +
-      summaryPanels() +
-      html`<section class="surface spaced">
-        <h2>Actividad reciente</h2>
-        ${table(
-          ['Actividad', 'Fecha'],
-          db.actividad
-            .slice(-8)
-            .reverse()
-            .map((a) => [esc(a.descripcion), esc(new Date(a.fecha).toLocaleString('es-SV'))])
-        )}
-      </section>`
-    );
+    return view('modules/dashboard/index.html#contenido', {
+      contenido: isStaff()
+        ? link('equipos', 'Registrar equipo', 'create', '', 'btn btn-primary')
+        : '',
+      opciones_sede_id: selectOptions(db.sedes, params.get('sede_id')),
+      limpiar: link(route, 'Limpiar'),
+      summaryPanels: summaryPanels(),
+      table: table(
+        ['Actividad', 'Fecha'],
+        db.actividad
+          .slice(-8)
+          .reverse()
+          .map((a) => [esc(a.descripcion), esc(new Date(a.fecha).toLocaleString('es-SV'))])
+      )
+    });
   }
   function equipmentPage() {
     if (['create', 'edit'].includes(action)) {
       const e = action === 'edit' ? requireRow('equipos') : {};
-      return (
-        title(e.id ? 'Editar equipo' : 'Registrar equipo', 'Completa los datos del equipo') +
-        html`<section class="surface">
-          ${form('equipo', field('codigo', 'Código', e.codigo, 'text', true, 'maxlength="50"') + field('nombre', 'Nombre', e.nombre, 'text', true, 'maxlength="100"') + select('tipo_id', 'Categoría', db.tipos_equipo, e.tipo_id, true) + field('marca', 'Marca', e.marca) + field('modelo', 'Modelo', e.modelo) + field('numero_serie', 'Número de serie', e.numero_serie) + select('ubicacion_id', 'Ubicación', db.ubicaciones, e.ubicacion_id, true) + select('responsable_id', 'Responsable', db.usuarios, e.responsable_id) + select('estado', 'Estado', ['Activo', 'Inactivo', 'En Mantenimiento'], e.estado || 'Activo', true) + field('fecha_adquisicion', 'Fecha de adquisición', e.fecha_adquisicion, 'date') + field('precio', 'Precio', e.precio, 'number', false, 'min="0" step="0.01"') + field('proveedor', 'Proveedor', e.proveedor) + area('observaciones', 'Observaciones', e.observaciones) + field('fotografia', 'Fotografía (JPG, PNG o WebP, máximo 3 MB)', '', 'file', false, 'accept="image/jpeg,image/png,image/webp"') + (e.fotografia ? '<p>Se conserva la fotografía actual si no seleccionas otra.</p>' : ''), 'equipos', e.id)}
-        </section>`
+      return view(
+        'modules/equipos/' + (action === 'edit' ? 'edit' : 'create') + '.html#contenido',
+        {
+          titulo: esc(e.id ? 'Editar equipo' : 'Registrar equipo'),
+          registro: esc(e.id),
+          codigo: esc(e.codigo),
+          nombre: esc(e.nombre),
+          opciones_tipo_id: selectOptions(db.tipos_equipo, e.tipo_id),
+          marca: esc(e.marca),
+          modelo: esc(e.modelo),
+          numero_serie: esc(e.numero_serie),
+          opciones_ubicacion_id: selectOptions(db.ubicaciones, e.ubicacion_id),
+          opciones_responsable_id: selectOptions(db.usuarios, e.responsable_id),
+          opciones_estado: selectOptions(
+            ['Activo', 'Inactivo', 'En Mantenimiento'],
+            e.estado || 'Activo'
+          ),
+          fecha_adquisicion: esc(e.fecha_adquisicion),
+          precio: esc(e.precio),
+          proveedor: esc(e.proveedor),
+          observaciones: esc(e.observaciones),
+          contenido: e.fotografia
+            ? '<p>Se conserva la fotografía actual si no seleccionas otra.</p>'
+            : '',
+          cancelar: link('equipos', 'Cancelar')
+        }
       );
     }
     if (['view', 'photo'].includes(action)) {
       const e = requireRow('equipos');
-      return (
-        title(e.nombre, e.codigo, link('equipos', 'Editar', 'edit', e.id)) +
-        link('equipos', '← Inventario', 'index', '', 'back-link') +
-        html`<section class="surface">
-            <div class="equipment-hero">
-              <div class="equipment-image-frame">${photo(e)}</div>
-              <div>
-                ${badge(status(e))}${details([
-                  ['Marca', e.marca],
-                  ['Modelo', e.modelo],
-                  ['Serie', e.numero_serie],
-                  ['Categoría', name('tipos_equipo', e.tipo_id)],
-                  ['Ubicación', name('ubicaciones', e.ubicacion_id)],
-                  ['Responsable', name('usuarios', e.responsable_id)],
-                  ['Adquisición', e.fecha_adquisicion],
-                  [
-                    'Precio',
-                    e.precio === null || e.precio === ''
-                      ? '—'
-                      : new Intl.NumberFormat('es-SV', {
-                          style: 'currency',
-                          currency: db.configuracion.moneda || 'USD'
-                        }).format(Number(e.precio))
-                  ],
-                  ['Proveedor', e.proveedor]
-                ])}
-              </div>
-            </div>
-            <h2>Observaciones</h2>
-            <p>${esc(e.observaciones || 'Sin observaciones.')}</p>
-          </section>
-          <section class="surface">
-            <h2>Historial de préstamos</h2>
-            ${table(
-              ['Persona', 'Salida', 'Devolución prevista', 'Devuelto'],
-              db.prestamos
-                .filter((p) => String(p.equipo_id) === String(e.id))
-                .map((p) => [
-                  esc(name('usuarios', p.usuario_id)),
-                  esc(p.fecha_prestamo),
-                  esc(p.fecha_devolucion),
-                  esc(p.devuelto_en ? 'Sí' : 'No')
-                ])
-            )}
-          </section>
-          <section class="surface">
-            <h2>Historial de fallas y mantenimiento</h2>
-            ${table(
-              ['Descripción', 'Estado', 'Detalle'],
-              db.reportes
-                .filter((r) => String(r.equipo_id) === String(e.id))
-                .map((r) => [
-                  esc(r.descripcion),
-                  esc(states[r.estado_id - 1]),
-                  link('reportes', 'Ver', 'view', r.id)
-                ])
-            )}
-          </section>`
+      return view(
+        'modules/equipos/' + (action === 'photo' ? 'photo' : 'view') + '.html#contenido',
+        {
+          titulo: esc(e.nombre),
+          descripcion: esc(e.codigo),
+          link: link('equipos', 'Editar', 'edit', e.id),
+          link2: link('equipos', '← Inventario', 'index', '', 'back-link'),
+          photo: photo(e),
+          badge: badge(status(e)),
+          details: details([
+            ['Marca', e.marca],
+            ['Modelo', e.modelo],
+            ['Serie', e.numero_serie],
+            ['Categoría', name('tipos_equipo', e.tipo_id)],
+            ['Ubicación', name('ubicaciones', e.ubicacion_id)],
+            ['Responsable', name('usuarios', e.responsable_id)],
+            ['Adquisición', e.fecha_adquisicion],
+            [
+              'Precio',
+              e.precio === null || e.precio === ''
+                ? '—'
+                : new Intl.NumberFormat('es-SV', {
+                    style: 'currency',
+                    currency: db.configuracion.moneda || 'USD'
+                  }).format(Number(e.precio))
+            ],
+            ['Proveedor', e.proveedor]
+          ]),
+          esc: esc(e.observaciones || 'Sin observaciones.'),
+          table: table(
+            ['Persona', 'Salida', 'Devolución prevista', 'Devuelto'],
+            db.prestamos
+              .filter((p) => String(p.equipo_id) === String(e.id))
+              .map((p) => [
+                esc(name('usuarios', p.usuario_id)),
+                esc(p.fecha_prestamo),
+                esc(p.fecha_devolucion),
+                esc(p.devuelto_en ? 'Sí' : 'No')
+              ])
+          ),
+          table2: table(
+            ['Descripción', 'Estado', 'Detalle'],
+            db.reportes
+              .filter((r) => String(r.equipo_id) === String(e.id))
+              .map((r) => [
+                esc(r.descripcion),
+                esc(states[r.estado_id - 1]),
+                link('reportes', 'Ver', 'view', r.id)
+              ])
+          )
+        }
       );
     }
     const rows = matchingEquipment(),
       pages = Math.max(1, Math.ceil(rows.length / 20)),
       page = Math.max(1, Math.min(pages, Number(params.get('page')) || 1));
-    return (
-      title(
-        'Inventario',
-        'Control y seguimiento de equipos',
-        button('Exportar CSV', 'csv') +
-          link('equipos', 'Registrar equipo', 'create', '', 'btn btn-primary')
-      ) +
-      filters(
-        field('q', 'Buscar', params.get('q')) +
-          select('tipo_id', 'Categoría', db.tipos_equipo, params.get('tipo_id')) +
-          select('sede_id', 'Sede', db.sedes, params.get('sede_id')) +
-          select(
-            'estado',
-            'Estado',
-            ['Activo', 'Inactivo', 'En Mantenimiento', 'Prestado'],
-            params.get('estado')
-          )
-      ) +
-      table(
+    return view('modules/equipos/index.html#contenido', {
+      button: button('Exportar CSV', 'csv'),
+      link: link('equipos', 'Registrar equipo', 'create', '', 'btn btn-primary'),
+      q: esc(params.get('q')),
+      opciones_tipo_id: selectOptions(db.tipos_equipo, params.get('tipo_id')),
+      opciones_sede_id: selectOptions(db.sedes, params.get('sede_id')),
+      opciones_estado: selectOptions(
+        ['Activo', 'Inactivo', 'En Mantenimiento', 'Prestado'],
+        params.get('estado')
+      ),
+      limpiar: link(route, 'Limpiar'),
+      table: table(
         ['Equipo', 'Categoría', 'Ubicación', 'Estado', 'Acciones'],
         rows.slice((page - 1) * 20, page * 20).map((e) => [
-          html`<div class="inventory-device">
-            <div class="inventory-device-media">${photo(e)}</div>
-            <div><strong>${esc(e.nombre)}</strong><small>${esc(e.codigo)}</small></div>
-          </div>`,
+          html`
+            <div class="inventory-device">
+              <div class="inventory-device-media">${photo(e)}</div>
+              <div>
+                <strong>${esc(e.nombre)}</strong>
+                <small>${esc(e.codigo)}</small>
+              </div>
+            </div>
+          `,
           esc(name('tipos_equipo', e.tipo_id)),
           esc(name('ubicaciones', e.ubicacion_id)),
           badge(status(e)),
-          html`<div class="table-action">
-            ${link('equipos', 'Ver', 'view', e.id)}${link('equipos', 'Editar', 'edit', e.id)}${isAdmin() ? button('Eliminar', 'delete-equipo', e.id) : ''}
-          </div>`
+          html`
+            <div class="table-action">
+              ${link('equipos', 'Ver', 'view', e.id)}${link('equipos', 'Editar', 'edit', e.id)}${isAdmin() ? button('Eliminar', 'delete-equipo', e.id) : ''}
+            </div>
+          `
         ])
-      ) +
-      html`<div class="pagination-bar">
-        <span>${rows.length} equipos · Página ${page} de ${pages}</span
-        >${page > 1 ? button('Anterior', 'page', page - 1) : ''}${page < pages ? button('Siguiente', 'page', page + 1) : ''}
-      </div>`
-    );
+      ),
+      contenido: rows.length,
+      page: page,
+      pages: pages,
+      contenido2: page > 1 ? button('Anterior', 'page', page - 1) : '',
+      contenido3: page < pages ? button('Siguiente', 'page', page + 1) : ''
+    });
   }
   function loansPage() {
     if (action === 'create')
-      return (
-        title('Registrar préstamo', 'Solo se pueden prestar equipos disponibles') +
-        html`<section class="surface">
-          ${form(
-            'prestamo',
-            select(
-              'equipo_id',
-              'Equipo',
-              db.equipos.filter(available).map((e) => ({ id: e.id, nombre: eqName(e.id) })),
-              '',
-              true
-            ) +
-              select('usuario_id', 'Prestatario', db.usuarios, '', true) +
-              field('fecha_prestamo', 'Fecha de salida', today(), 'date', true) +
-              field('fecha_devolucion', 'Devolución prevista', today(), 'date', true) +
-              area('observaciones', 'Observaciones')
-          )}
-        </section>`
-      );
+      return view('modules/prestamos/create.html#contenido', {
+        opciones_equipo_id: selectOptions(
+          db.equipos.filter(available).map((e) => ({ id: e.id, nombre: eqName(e.id) })),
+          ''
+        ),
+        opciones_usuario_id: selectOptions(db.usuarios, ''),
+        fecha_prestamo: esc(today()),
+        fecha_devolucion: esc(today()),
+        cancelar: link(route, 'Cancelar')
+      });
     const filter = params.get('estado');
     const rows = db.prestamos.filter(
       (p) =>
@@ -437,14 +491,11 @@ ${esc(value)}</textarea>
           ? !!p.devuelto_en
           : !p.devuelto_en && (filter !== 'Atrasado' || p.fecha_devolucion < today()))
     );
-    return (
-      title(
-        'Préstamos',
-        'Entregas y devoluciones de equipos',
-        link('prestamos', 'Nuevo préstamo', 'create', '', 'btn btn-primary')
-      ) +
-      filters(select('estado', 'Estado', ['En curso', 'Atrasado', 'Devuelto'], filter)) +
-      table(
+    return view('modules/prestamos/index.html#contenido', {
+      link: link('prestamos', 'Nuevo préstamo', 'create', '', 'btn btn-primary'),
+      opciones_estado: selectOptions(['En curso', 'Atrasado', 'Devuelto'], filter),
+      limpiar: link(route, 'Limpiar'),
+      table: table(
         ['Equipo', 'Prestatario', 'Salida', 'Devolución prevista', 'Estado', 'Acciones'],
         rows
           .slice()
@@ -462,41 +513,42 @@ ${esc(value)}</textarea>
               : button('Registrar devolución', 'return', p.id)
           ])
       )
-    );
+    });
   }
   function locationsPage() {
     if (['create', 'edit'].includes(action)) {
       const l = action === 'edit' ? requireRow('ubicaciones') : {};
-      return (
-        title(l.id ? 'Editar ubicación' : 'Nueva ubicación') +
-        html`<section class="surface">
-          ${form('ubicacion', field('nombre', 'Nombre', l.nombre, 'text', true) + select('sede_id', 'Sede', db.sedes, l.sede_id, true) + field('tipo', 'Tipo de espacio', l.tipo || 'Aula', 'text', true) + area('descripcion', 'Descripción', l.descripcion), 'ubicaciones', l.id)}
-        </section>`
+      return view(
+        'modules/ubicaciones/' + (action === 'edit' ? 'edit' : 'create') + '.html#contenido',
+        {
+          titulo: esc(l.id ? 'Editar ubicación' : 'Nueva ubicación'),
+          registro: esc(l.id),
+          nombre: esc(l.nombre),
+          opciones_sede_id: selectOptions(db.sedes, l.sede_id),
+          tipo: esc(l.tipo || 'Aula'),
+          descripcion: esc(l.descripcion),
+          cancelar: link('ubicaciones', 'Cancelar')
+        }
       );
     }
-    return (
-      title(
-        'Ubicaciones',
-        'Sedes y espacios del inventario',
-        link('ubicaciones', 'Nueva ubicación', 'create', '', 'btn btn-primary')
-      ) +
-      html`<div class="site-grid">
-        ${db.sedes
-          .map(
-            (s) =>
-              html`<div class="site-card tone-blue">
-                <div>
-                  <strong>${esc(s.nombre)}</strong
-                  ><span
-                    >${db.ubicaciones.filter((l) => String(l.sede_id) === String(s.id)).length}
-                    espacios</span
-                  >
-                </div>
-              </div>`
-          )
-          .join('')}
-      </div>` +
-      table(
+    return view('modules/ubicaciones/index.html#contenido', {
+      link: link('ubicaciones', 'Nueva ubicación', 'create', '', 'btn btn-primary'),
+      contenido: db.sedes
+        .map(
+          (s) => html`
+            <div class="site-card tone-blue">
+              <div>
+                <strong>${esc(s.nombre)}</strong>
+                <span>
+                  ${db.ubicaciones.filter((l) => String(l.sede_id) === String(s.id)).length}
+                  espacios
+                </span>
+              </div>
+            </div>
+          `
+        )
+        .join(''),
+      table: table(
         ['Ubicación', 'Sede', 'Equipos', 'Disponibles', 'Mantenimiento', 'Acciones'],
         db.ubicaciones.map((l) => {
           const eq = db.equipos.filter((e) => String(e.ubicacion_id) === String(l.id));
@@ -506,81 +558,85 @@ ${esc(value)}</textarea>
             eq.length,
             eq.filter(available).length,
             eq.filter((e) => e.estado === 'En Mantenimiento').length,
-            html`<div class="table-action">
-              ${link('ubicaciones', 'Editar', 'edit', l.id)}${isAdmin() ? button('Eliminar', 'delete-ubicacion', l.id) : ''}
-            </div>`
+            html`
+              <div class="table-action">
+                ${link('ubicaciones', 'Editar', 'edit', l.id)}${isAdmin() ? button('Eliminar', 'delete-ubicacion', l.id) : ''}
+              </div>
+            `
           ];
         })
       )
-    );
+    });
   }
   function reportsPage(maintenance = false) {
     if (action === 'create' && !params.get('id'))
-      return (
-        title('Reportar falla', 'El equipo pasará a mantenimiento') +
-        html`<section class="surface">
-          ${form(
-            'reporte',
-            select(
-              'equipo_id',
-              'Equipo',
-              db.equipos
-                .filter(
-                  (e) =>
-                    ['Activo', 'En Mantenimiento'].includes(e.estado) &&
-                    !activeLoan(e.id) &&
-                    !openReport(e.id)
-                )
-                .map((e) => ({ id: e.id, nombre: eqName(e.id) })),
-              '',
-              true
-            ) + area('descripcion', 'Descripción de la falla')
-          )}
-        </section>`
+      return view(
+        'modules/' + (maintenance ? 'mantenimiento' : 'reportes') + '/create.html#contenido',
+        {
+          opciones_equipo_id: selectOptions(
+            db.equipos
+              .filter(
+                (e) =>
+                  ['Activo', 'En Mantenimiento'].includes(e.estado) &&
+                  !activeLoan(e.id) &&
+                  !openReport(e.id)
+              )
+              .map((e) => ({ id: e.id, nombre: eqName(e.id) })),
+            ''
+          ),
+          cancelar: link(route, 'Cancelar')
+        }
       );
     if (['view', 'assign', 'edit'].includes(action) || (action === 'create' && params.get('id'))) {
       const r = requireRow('reportes');
       if (!isStaff() && String(r.usuario_id) !== String(user.id))
         throw Error('Este reporte pertenece a otro perfil.');
       const m = db.mantenimientos.find((m) => String(m.reporte_id) === String(r.id)) || {};
-      return (
-        title('Detalle de falla', eqName(r.equipo_id)) +
-        html`<section class="surface">
-          ${badge(states[r.estado_id - 1])}${details([
+      return view(
+        maintenance
+          ? 'modules/mantenimiento/assign.html#contenido'
+          : 'modules/reportes/view.html#contenido',
+        {
+          descripcion: esc(eqName(r.equipo_id)),
+          badge: badge(states[r.estado_id - 1]),
+          details: details([
             ['Descripción', r.descripcion],
             ['Reportado por', name('usuarios', r.usuario_id)],
             ['Fecha', r.fecha_reporte],
             ['Técnico', name('usuarios', m.tecnico_id)],
             ['Diagnóstico', m.diagnostico],
             ['Solución', m.solucion]
-          ])}
-        </section>` +
-        (isStaff() && Number(r.estado_id) !== 5
-          ? html`<section class="surface">
-              <h2>Seguimiento de mantenimiento</h2>
-              ${form(
-                'mantenimiento',
-                select(
-                  'tecnico_id',
-                  'Técnico responsable',
-                  db.usuarios.filter((u) => Number(u.rol_id) !== 3),
-                  m.tecnico_id || user.id,
-                  true
-                ) +
-                  select(
-                    'estado_id',
-                    'Estado',
-                    states.map((s, i) => ({ id: i + 1, nombre: s })),
-                    r.estado_id,
-                    true
-                  ) +
-                  area('diagnostico', 'Diagnóstico', m.diagnostico) +
-                  area('solucion', 'Solución (obligatoria al finalizar)', m.solucion),
-                route,
-                r.id
-              )}
-            </section>`
-          : '')
+          ]),
+          contenido:
+            isStaff() && Number(r.estado_id) !== 5
+              ? html`
+                  <section class="surface">
+                    <h2>Seguimiento de mantenimiento</h2>
+                    ${form(
+                      'mantenimiento',
+                      select(
+                        'tecnico_id',
+                        'Técnico responsable',
+                        db.usuarios.filter((u) => Number(u.rol_id) !== 3),
+                        m.tecnico_id || user.id,
+                        true
+                      ) +
+                        select(
+                          'estado_id',
+                          'Estado',
+                          states.map((s, i) => ({ id: i + 1, nombre: s })),
+                          r.estado_id,
+                          true
+                        ) +
+                        area('diagnostico', 'Diagnóstico', m.diagnostico) +
+                        area('solucion', 'Solución (obligatoria al finalizar)', m.solucion),
+                      route,
+                      r.id
+                    )}
+                  </section>
+                `
+              : ''
+        }
       );
     }
     const rows = db.reportes.filter(
@@ -590,35 +646,35 @@ ${esc(value)}</textarea>
         (!params.get('desde') || r.fecha_reporte.slice(0, 10) >= params.get('desde')) &&
         (!params.get('hasta') || r.fecha_reporte.slice(0, 10) <= params.get('hasta'))
     );
-    return (
-      title(
-        maintenance ? 'Mantenimiento' : 'Reportes de fallas',
-        maintenance ? 'Diagnóstico, reparación y cierre' : 'Registro y seguimiento de incidencias',
-        link(route, 'Reportar falla', 'create', '', 'btn btn-primary')
-      ) +
-      filters(
-        select(
-          'estado_id',
-          'Estado',
+    return view(
+      'modules/' + (maintenance ? 'mantenimiento' : 'reportes') + '/index.html#contenido',
+      {
+        titulo: esc(maintenance ? 'Mantenimiento' : 'Reportes de fallas'),
+        descripcion: esc(
+          maintenance ? 'Diagnóstico, reparación y cierre' : 'Registro y seguimiento de incidencias'
+        ),
+        link: link(route, 'Reportar falla', 'create', '', 'btn btn-primary'),
+        opciones_estado_id: selectOptions(
           states.map((s, i) => ({ id: i + 1, nombre: s })),
           params.get('estado_id')
-        ) +
-          field('desde', 'Desde', params.get('desde'), 'date') +
-          field('hasta', 'Hasta', params.get('hasta'), 'date')
-      ) +
-      table(
-        ['Equipo', 'Falla', 'Fecha', 'Estado', 'Acciones'],
-        rows
-          .slice()
-          .reverse()
-          .map((r) => [
-            esc(eqName(r.equipo_id)),
-            esc(r.descripcion),
-            esc(r.fecha_reporte.slice(0, 10)),
-            badge(states[r.estado_id - 1]),
-            link(route, 'Ver seguimiento', 'view', r.id)
-          ])
-      )
+        ),
+        desde: esc(params.get('desde')),
+        hasta: esc(params.get('hasta')),
+        limpiar: link(route, 'Limpiar'),
+        table: table(
+          ['Equipo', 'Falla', 'Fecha', 'Estado', 'Acciones'],
+          rows
+            .slice()
+            .reverse()
+            .map((r) => [
+              esc(eqName(r.equipo_id)),
+              esc(r.descripcion),
+              esc(r.fecha_reporte.slice(0, 10)),
+              badge(states[r.estado_id - 1]),
+              link(route, 'Ver seguimiento', 'view', r.id)
+            ])
+        )
+      }
     );
   }
   function userFields(u) {
@@ -628,53 +684,52 @@ ${esc(value)}</textarea>
       field('telefono', 'Teléfono', u.telefono, 'tel') +
       field('cargo', 'Cargo', u.cargo) +
       select('sede_id', 'Sede', db.sedes, u.sede_id) +
-      select('apariencia', 'Apariencia', ['claro', 'compacto'], u.apariencia || 'claro', true)
+      select(
+        'apariencia',
+        'Densidad de la interfaz',
+        [
+          { id: 'claro', nombre: 'Cómoda' },
+          { id: 'compacto', nombre: 'Compacta' }
+        ],
+        u.apariencia || 'claro',
+        true
+      )
     );
   }
   function usersPage() {
     if (['create', 'edit'].includes(action)) {
       const u = action === 'edit' ? requireRow('usuarios') : {};
-      return (
-        title(
-          u.id ? 'Editar usuario' : 'Nuevo usuario',
-          'Configura los datos y permisos de la cuenta'
-        ) +
-        html`<section class="surface">
-          ${form(
-            'usuario',
-            userFields(u) +
-              passwordFields(u) +
-              select(
-                'rol_id',
-                'Rol',
-                roles.map((nombre, i) => ({ id: i + 1, nombre })),
-                u.rol_id || 3,
-                true
-              ),
-            'usuarios',
-            u.id
-          )}
-        </section>`
+      return view(
+        'modules/usuarios/' + (action === 'edit' ? 'edit' : 'create') + '.html#contenido',
+        {
+          titulo: esc(u.id ? 'Editar usuario' : 'Nuevo usuario'),
+          registro: esc(u.id),
+          userFields: userFields(u),
+          passwordFields: passwordFields(u),
+          opciones_rol_id: selectOptions(
+            roles.map((nombre, i) => ({ id: i + 1, nombre })),
+            u.rol_id || 3
+          ),
+          cancelar: link('usuarios', 'Cancelar')
+        }
       );
     }
-    return (
-      title(
-        'Usuarios',
-        'Cuentas y permisos de acceso',
-        link('usuarios', 'Nuevo usuario', 'create', '', 'btn btn-primary')
-      ) +
-      table(
+    return view('modules/usuarios/index.html#contenido', {
+      link: link('usuarios', 'Nuevo usuario', 'create', '', 'btn btn-primary'),
+      table: table(
         ['Nombre', 'Correo', 'Rol', 'Acciones'],
         db.usuarios.map((u) => [
           esc(u.nombre),
           esc(u.email),
           esc(roles[u.rol_id - 1]),
-          html`<div class="table-action">
-            ${link('usuarios', 'Editar', 'edit', u.id)}${String(u.id) !== String(user.id) ? button('Eliminar', 'delete-usuario', u.id) : ''}
-          </div>`
+          html`
+            <div class="table-action">
+              ${link('usuarios', 'Editar', 'edit', u.id)}${String(u.id) !== String(user.id) ? button('Eliminar', 'delete-usuario', u.id) : ''}
+            </div>
+          `
         ])
       )
-    );
+    });
   }
   function settingsPage() {
     const tab = params.get('tab') || 'general';
@@ -685,44 +740,37 @@ ${esc(value)}</textarea>
       ['sedes', 'Sedes'],
       ['respaldo', 'Respaldos']
     ];
-    const menu = html`<nav class="settings-tabs" aria-label="Secciones de configuración">
-      ${tabs.map(([key, label]) => html`<a href="#/configuracion/index?tab=${key}" class="${key === tab ? 'active' : ''}" ${key === tab ? 'aria-current="page"' : ''}>${label}</a>`).join('')}
-    </nav>`;
+    const menu = view('modules/configuracion/index.html#navegacion', {
+      contenido: tabs
+        .map(
+          ([key, label]) => html`
+            <a
+              href="#/configuracion/index?tab=${key}"
+              class="${key === tab ? 'active' : ''}"
+              ${key === tab ? 'aria-current="page"' : ''}
+            >
+              ${label}
+            </a>
+          `
+        )
+        .join('')
+    });
     let content = '';
 
     if (tab === 'general') {
-      content = html`<div class="settings-layout">
-        <section class="surface settings-main">
-          <h2>Apariencia</h2>
-          <p class="section-description">Elige cómo ver InventIC en este dispositivo.</p>
-          <div class="theme-options" role="group" aria-label="Tema de la aplicación">
-            <button type="button" class="btn btn-light" data-theme-choice="light">Claro</button>
-            <button type="button" class="btn btn-light" data-theme-choice="dark">Oscuro</button>
-          </div>
-        </section>
-        <aside class="surface settings-summary">
-          <h2>Tu organización</h2>
-          ${details([
-            ['Usuarios', db.usuarios.length],
-            ['Equipos', db.equipos.length],
-            ['Sedes', db.sedes.length],
-            ['Categorías', db.tipos_equipo.length]
-          ])}
-          ${link('perfil', 'Editar mi perfil')}
-        </aside>
-      </div>`;
+      content = view('modules/configuracion/index.html#apariencia', {
+        details: details([
+          ['Usuarios', db.usuarios.length],
+          ['Equipos', db.equipos.length],
+          ['Sedes', db.sedes.length],
+          ['Categorías', db.tipos_equipo.length]
+        ]),
+        link: link('perfil', 'Editar mi perfil')
+      });
     } else if (tab === 'usuarios') {
-      content = html`<section class="surface">
-        <div class="section-header">
-          <div>
-            <h2>Usuarios y permisos</h2>
-            <p class="section-description">
-              Administra las cuentas que pueden ingresar al sistema.
-            </p>
-          </div>
-          ${link('usuarios', 'Administrar usuarios', 'index', '', 'btn btn-primary')}
-        </div>
-        ${table(
+      content = view('modules/configuracion/index.html#usuarios', {
+        link: link('usuarios', 'Administrar usuarios', 'index', '', 'btn btn-primary'),
+        table: table(
           ['Rol', 'Acceso'],
           [
             ['Administrador', 'Configuración, usuarios y gestión completa del inventario.'],
@@ -732,78 +780,43 @@ ${esc(value)}</textarea>
             ],
             ['Docente', 'Consulta del panel, registro de fallas y edición de su perfil.']
           ]
-        )}
-      </section>`;
+        )
+      });
     } else if (tab === 'categorias' || tab === 'sedes') {
       const categories = tab === 'categorias';
       const collection = categories ? 'tipos_equipo' : 'sedes';
       const type = categories ? 'categoria' : 'sede';
       const record = find(collection, params.get('id')) || {};
-      content = html`<div class="settings-layout">
-        <section class="surface settings-main">
-          <h2>${categories ? 'Categorías de equipos' : 'Sedes registradas'}</h2>
-          ${table(
-            ['Nombre', 'Acciones'],
-            db[collection].map((row) => [
-              esc(row.nombre),
-              html`<div class="table-action">
-                <a class="btn btn-light" href="#/configuracion/index?tab=${tab}&id=${row.id}"
-                  >Editar</a
-                >${button('Eliminar', 'delete-' + type, row.id)}
-              </div>`
-            ])
-          )}
-        </section>
-        <section class="surface">
-          <h2>${record.id ? 'Editar' : 'Agregar'} ${categories ? 'categoría' : 'sede'}</h2>
-          ${form(
-            type,
-            field('nombre', 'Nombre', record.nombre, 'text', true, 'maxlength="100"') +
-              (categories
-                ? ''
-                : field(
-                    'direccion',
-                    'Dirección',
-                    record.direccion,
-                    'text',
-                    false,
-                    'maxlength="255"'
-                  )),
-            'configuracion',
-            record.id
-          )}
-        </section>
-      </div>`;
+      content = view('modules/configuracion/index.html#catalogos', {
+        contenido: categories ? 'Categorías de equipos' : 'Sedes registradas',
+        table: table(
+          ['Nombre', 'Acciones'],
+          db[collection].map((row) => [
+            esc(row.nombre),
+            html`
+              <div class="table-action">
+                <a class="btn btn-light" href="#/configuracion/index?tab=${tab}&id=${row.id}">
+                  Editar
+                </a>
+                ${button('Eliminar', 'delete-' + type, row.id)}
+              </div>
+            `
+          ])
+        ),
+        contenido2: record.id ? 'Editar' : 'Agregar',
+        contenido3: categories ? 'categoría' : 'sede',
+        valor: esc(type),
+        registro: esc(record.id),
+        nombre: esc(record.nombre),
+        contenido4: categories
+          ? ''
+          : field('direccion', 'Dirección', record.direccion, 'text', false, 'maxlength="255"'),
+        cancelar: link('configuracion', 'Cancelar')
+      });
     } else if (tab === 'respaldo') {
-      content = html`<div class="panel-grid">
-        <section class="surface backup-card">
-          <span class="eyebrow">EXPORTAR</span>
-          <h2>Descargar un respaldo</h2>
-          <p>
-            Guarda una copia de los registros y la configuración. Las contraseñas no se incluyen.
-          </p>
-          ${button('Descargar respaldo JSON', 'backup', '', 'btn btn-primary')}
-        </section>
-        <section class="surface backup-card">
-          <span class="eyebrow">RESTAURAR</span>
-          <h2>Importar un respaldo</h2>
-          <p>
-            Esta operación reemplaza los registros actuales. Descarga una copia antes de continuar.
-          </p>
-          <form data-form="import">
-            <label class="form-label" for="backup">Archivo JSON · máximo 20 MB</label>
-            <input
-              class="form-control"
-              id="backup"
-              name="backup"
-              type="file"
-              accept=".json,application/json"
-              required
-            />
-            <button class="btn btn-light" type="submit">Importar respaldo</button>
-          </form>
-        </section>
-      </div>`;
+      content = view('modules/configuracion/index.html#respaldos', {
+        button: button('Descargar respaldo JSON', 'backup', '', 'btn btn-primary')
+      });
     } else {
       content = '<p class="empty-state">Selecciona una sección de configuración.</p>';
     }
@@ -815,37 +828,36 @@ ${esc(value)}</textarea>
     );
   }
   function statsPage() {
-    return (
-      title(
-        'Reportes',
-        'Resumen imprimible del inventario',
-        button('Exportar inventario CSV', 'csv') + button('Imprimir / guardar PDF', 'print')
-      ) +
-      filters(select('sede_id', 'Sede', db.sedes, params.get('sede_id'))) +
-      summaryPanels() +
-      html`<section class="surface spaced">
-        <h2>Estado del inventario</h2>
-        ${table(
-          ['Código', 'Equipo', 'Estado', 'Ubicación'],
-          matchingEquipment().map((e) => [
-            esc(e.codigo),
-            esc(e.nombre),
-            esc(status(e)),
-            esc(name('ubicaciones', e.ubicacion_id))
-          ])
-        )}
-      </section>`
-    );
+    return view('modules/estadisticas/index.html#contenido', {
+      button: button('Exportar inventario CSV', 'csv'),
+      button2: button('Imprimir / guardar PDF', 'print'),
+      opciones_sede_id: selectOptions(db.sedes, params.get('sede_id')),
+      limpiar: link(route, 'Limpiar'),
+      summaryPanels: summaryPanels(),
+      table: table(
+        ['Código', 'Equipo', 'Estado', 'Ubicación'],
+        matchingEquipment().map((e) => [
+          esc(e.codigo),
+          esc(e.nombre),
+          esc(status(e)),
+          esc(name('ubicaciones', e.ubicacion_id))
+        ])
+      )
+    });
   }
   function render() {
     try {
       db = store.read();
       user = auth.currentUser(db);
-      const [path, query = ''] = (location.hash.slice(1) || '/dashboard/index').split('?');
+      const [path, query = ''] = (
+        location.hash.slice(1) ||
+        '/' + (document.body.dataset.page || 'dashboard/index') + location.search
+      ).split('?');
       [route = 'dashboard', action = 'index'] = path.split('/').filter(Boolean);
       params = new URLSearchParams(query);
       if (!user) {
         renderLogin();
+        window.dispatchEvent(new Event('inventic:render'));
         return;
       }
       if (route === 'login') {
@@ -873,17 +885,15 @@ ${esc(value)}</textarea>
         configuracion: settingsPage,
         estadisticas: statsPage,
         perfil: () =>
-          title('Mi perfil', 'Datos personales y preferencias') +
-          html`<section class="surface profile-card">
-            <div class="profile-heading">
-              <span class="avatar">${esc(user.nombre.slice(0, 1))}</span>
-              <div>
-                <h2>${esc(user.nombre)}</h2>
-                <p>${esc(roles[user.rol_id - 1])}</p>
-              </div>
-            </div>
-            ${form('perfil', userFields(user) + passwordFields(user), 'dashboard', user.id)}
-          </section>`
+          view('modules/perfil/index.html#contenido', {
+            esc: esc(user.nombre.slice(0, 1)),
+            esc2: esc(user.nombre),
+            esc3: esc(roles[user.rol_id - 1]),
+            registro: esc(user.id),
+            userFields: userFields(user),
+            passwordFields: passwordFields(user),
+            cancelar: link('dashboard', 'Cancelar')
+          })
       };
       if (!views[route]) throw Error('La página solicitada no existe.');
       document.body.classList.toggle('density-compact', user.apariencia === 'compacto');
@@ -892,68 +902,80 @@ ${esc(value)}</textarea>
         ' · ' +
         db.configuracion.nombre;
       const content = views[route]();
-      document.getElementById('app').innerHTML = html`<div id="wrapper">
-        <aside id="sidebar-wrapper">
-          <a class="sidebar-brand" href="#/dashboard/index"
-            ><img class="sidebar-logo" src="assets/logo.svg" alt="Logo InventIC" />
-            <div>
-              ${esc(db.configuracion.nombre)}<span>${esc(db.configuracion.institucion)}</span>
-            </div></a
-          >
-          <nav class="sidebar-nav" aria-label="Navegación principal">
-            ${navigation
-              .filter(
-                (n) =>
-                  (isStaff() || ['dashboard', 'reportes'].includes(n[0])) &&
-                  (isAdmin() || n[0] !== 'configuracion')
-              )
-              .map(
-                ([r, t, i]) =>
-                  html`<a
-                    class="list-group-item-sidebar ${r === route ? 'active' : ''}"
-                    ${r === route ? 'aria-current="page"' : ''}
-                    href="${url(r)}"
-                    ><i aria-hidden="true">${i}</i>${t}</a
-                  >`
-              )
-              .join('')}
-          </nav>
-          <div class="sidebar-account">
-            <a href="#/perfil/index"
-              ><span class="avatar avatar-small">${esc(user.nombre.slice(0, 1))}</span
-              ><span
-                ><strong>${esc(user.nombre)}</strong
-                ><small>${esc(roles[user.rol_id - 1])}</small></span
-              ></a
-            >${button('Cerrar sesión', 'logout')}
+      document.getElementById('app').innerHTML = html`
+        <div id="wrapper">
+          <aside id="sidebar-wrapper">
+            <a class="sidebar-brand" href="#/dashboard/index">
+              <img class="sidebar-logo" src="assets/logo.svg" alt="Logo InventIC" />
+              <div>
+                ${esc(db.configuracion.nombre)}
+                <span>${esc(db.configuracion.institucion)}</span>
+              </div>
+            </a>
+            <nav class="sidebar-nav" aria-label="Navegación principal">
+              ${navigation
+                .filter(
+                  (n) =>
+                    (isStaff() || ['dashboard', 'reportes'].includes(n[0])) &&
+                    (isAdmin() || n[0] !== 'configuracion')
+                )
+                .map(
+                  ([r, t, i]) => html`
+                    <a
+                      class="list-group-item-sidebar ${r === route ? 'active' : ''}"
+                      ${r === route ? 'aria-current="page"' : ''}
+                      href="${url(r)}"
+                    >
+                      <i aria-hidden="true">${i}</i>
+                      ${t}
+                    </a>
+                  `
+                )
+                .join('')}
+            </nav>
+            <div class="sidebar-account">
+              <a href="#/perfil/index">
+                <span class="avatar avatar-small">${esc(user.nombre.slice(0, 1))}</span>
+                <span>
+                  <strong>${esc(user.nombre)}</strong>
+                  <small>${esc(roles[user.rol_id - 1])}</small>
+                </span>
+              </a>
+              ${button('Cerrar sesión', 'logout')}
+            </div>
+          </aside>
+          <div id="page-content-wrapper">
+            <div class="mobile-topbar">
+              <button
+                class="btn btn-light"
+                data-action="menu"
+                aria-controls="sidebar-wrapper"
+                aria-expanded="false"
+              >
+                ☰ Menú
+              </button>
+              <strong>${esc(db.configuracion.nombre)}</strong>
+            </div>
+            <main class="p-content" id="main-content" tabindex="-1">
+              <p class="local-notice">
+                <span class="local-tag">Conectado</span>
+                · ${esc(db.configuracion.institucion)}
+              </p>
+              <div id="message" aria-live="polite"></div>
+              ${content}
+            </main>
           </div>
-        </aside>
-        <div id="page-content-wrapper">
-          <div class="mobile-topbar">
-            <button
-              class="btn btn-light"
-              data-action="menu"
-              aria-controls="sidebar-wrapper"
-              aria-expanded="false"
-            >
-              ☰ Menú</button
-            ><strong>${esc(db.configuracion.nombre)}</strong>
-          </div>
-          <main class="p-content" id="main-content" tabindex="-1">
-            <p class="local-notice">
-              <span class="local-tag">Conectado</span> · ${esc(db.configuracion.institucion)}
-            </p>
-            <div id="message" aria-live="polite"></div>
-            ${content}
-          </main>
         </div>
-      </div>`;
+      `;
+      window.dispatchEvent(new Event('inventic:render'));
     } catch (error) {
-      document.getElementById('app').innerHTML = html`<main class="surface login-card">
-        <h1>InventIC</h1>
-        <div id="message"><p role="alert">${esc(error.message)}</p></div>
-        <a class="btn btn-primary" href="#/login/index">Volver al acceso local</a>
-      </main>`;
+      document.getElementById('app').innerHTML = html`
+        <main class="surface login-card">
+          <h1>InventIC</h1>
+          <div id="message"><p role="alert">${esc(error.message)}</p></div>
+          <a class="btn btn-primary" href="#/login/index">Volver al acceso local</a>
+        </main>
+      `;
     }
   }
   function passwordFields(account) {
@@ -991,55 +1013,40 @@ ${esc(value)}</textarea>
     const setup = auth.needsSetup();
     document.body.classList.remove('density-compact');
     document.title = setup ? 'Crear cuenta · InventIC' : 'Iniciar sesión · InventIC';
-    document.getElementById('app').innerHTML = html` <main class="login-layout">
-      <section class="login-intro">
-        <a class="login-brand" href="#/login/index">
-          <img src="assets/logo.svg" alt="Logo de InventIC" />
-          <span>${esc(db.configuracion.nombre)}</span>
-        </a>
-        <div class="login-intro-copy">
-          <span class="eyebrow">INVENTARIO INSTITUCIONAL</span>
-          <h1>Todo tu equipo,<br />en un solo lugar.</h1>
-          <p>Organiza el inventario, consulta los préstamos y da seguimiento al mantenimiento.</p>
-          <div class="login-feature"><span aria-hidden="true">✓</span> Inventario actualizado</div>
-          <div class="login-feature"><span aria-hidden="true">✓</span> Control de préstamos</div>
-          <div class="login-feature">
-            <span aria-hidden="true">✓</span> Seguimiento de incidencias
-          </div>
-        </div>
-        <p class="login-institution">${esc(db.configuracion.institucion)}</p>
-      </section>
-      <section class="login-form-panel">
-        <div class="login-form-content">
-          <span class="eyebrow">BIENVENIDO A INVENTIC</span>
-          <h2>${setup ? 'Crea tu cuenta' : 'Iniciar sesión'}</h2>
-          <p>
-            ${setup ? 'Configura la cuenta administradora para comenzar.' : 'Ingresa tu correo y contraseña para continuar.'}
-          </p>
-          <div id="message" aria-live="polite"></div>
-          <form data-form="${setup ? 'setup' : 'login'}">
-            ${setup ? field('nombre', 'Nombre completo', '', 'text', true, 'maxlength="100" autocomplete="name"') : ''}
-            ${field('email', 'Correo electrónico', '', 'email', true, 'maxlength="100" autocomplete="username"')}
-            ${field('password', 'Contraseña', '', 'password', true, 'minlength="8" maxlength="128" autocomplete="' + (setup ? 'new-password' : 'current-password') + '"')}
-            <button
-              class="password-toggle"
-              type="button"
-              data-action="toggle-password"
-              aria-pressed="false"
-            >
-              Mostrar contraseña
-            </button>
-            ${setup ? field('confirmation', 'Confirmar contraseña', '', 'password', true, 'minlength="8" maxlength="128" autocomplete="new-password"') : ''}
-            <button class="btn btn-primary login-submit" type="submit">
-              ${setup ? 'Crear cuenta' : 'Entrar'}
-            </button>
-          </form>
-          <p class="login-help">
-            ${setup ? 'Usa una contraseña de al menos 8 caracteres.' : 'Si olvidaste tu contraseña, solicita el cambio al administrador.'}
-          </p>
-        </div>
-      </section>
-    </main>`;
+    document.getElementById('app').innerHTML = view('auth/login.html#contenido', {
+      nombreSistema: esc(db.configuracion.nombre),
+      institucion: esc(db.configuracion.institucion),
+      tituloAcceso: setup ? 'Crea tu cuenta' : 'Iniciar sesión',
+      instrucciones: setup
+        ? 'Configura la cuenta administradora para comenzar.'
+        : 'Ingresa tu correo y contraseña para continuar.',
+      tipoFormulario: setup ? 'setup' : 'login',
+      campoNombre: setup
+        ? field(
+            'nombre',
+            'Nombre completo',
+            '',
+            'text',
+            true,
+            'maxlength="100" autocomplete="name"'
+          )
+        : '',
+      autocompletar: setup ? 'new-password' : 'current-password',
+      confirmacion: setup
+        ? field(
+            'confirmation',
+            'Confirmar contraseña',
+            '',
+            'password',
+            true,
+            'minlength="8" maxlength="128" autocomplete="new-password"'
+          )
+        : '',
+      textoBoton: setup ? 'Crear cuenta' : 'Entrar',
+      ayuda: setup
+        ? 'Usa una contraseña de al menos 8 caracteres.'
+        : 'Si olvidaste tu contraseña, solicita el cambio al administrador.'
+    });
   }
   function download(filename, content, type) {
     const blob = new Blob([content], { type });
@@ -1377,19 +1384,26 @@ ${esc(value)}</textarea>
   async function start() {
     try {
       await auth.load();
+      await window.InventicViews.load();
       if (auth.user()) await store.load();
       else store.setSettings(auth.settings());
       render();
     } catch (error) {
-      document.getElementById('app').innerHTML = html`<main class="surface connection-error">
-        <h1>No se pudo conectar</h1>
-        <p>${esc(error.message)}</p>
-        <p>
-          Inicia el proyecto con <strong>Iniciar InventIC.cmd</strong> y abre
-          <strong>http://localhost:3000</strong>.
-        </p>
-        <button class="btn btn-primary" onclick="location.reload()">Volver a intentar</button>
-      </main>`;
+      document.getElementById('app').innerHTML = html`
+        <main class="surface connection-error">
+          <h1>No se pudo conectar</h1>
+          <p>${esc(error.message)}</p>
+          <p>
+            Inicia el proyecto con
+            <strong>Iniciar InventIC.cmd</strong>
+            y abre
+            <strong>http://localhost:3000</strong>
+            .
+          </p>
+          <button class="btn btn-primary" onclick="location.reload()">Volver a intentar</button>
+        </main>
+      `;
+      window.dispatchEvent(new Event('inventic:render'));
     }
   }
   start();

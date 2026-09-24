@@ -2,15 +2,83 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>InventIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="../../" />
+    <title>Nueva ubicación · InventIC</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/app.css" />
+    <link rel="stylesheet" href="assets/static.css" />
+    <link rel="stylesheet" href="assets/interface.css" />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="assets/theme.js"></script>
+    <script src="assets/api.js" defer></script>
+    <script src="assets/views.js" defer></script>
+    <script src="assets/validation.js" defer></script>
+    <script src="assets/store.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/app.js" defer></script>
   </head>
-  <body>
-    <p><a id="destination" href="../../index.html#/ubicaciones/create">Abrir InventIC</a></p>
-    <script>
-      const dest = document.getElementById('destination');
-      dest.href += location.search;
-      location.replace(dest.href);
-    </script>
+  <body data-page="ubicaciones/create">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div id="app">
+      <main class="surface connection-error">
+        <h1>Ubicaciones</h1>
+        <p>Cargando datos…</p>
+      </main>
+    </div>
+    <template id="contenido">
+      <header class="page-title-box">
+        <div>
+          <h1 class="page-title">Nueva ubicación</h1>
+          <p></p>
+        </div>
+        <div class="page-actions"></div>
+      </header>
+      <section class="surface">
+        <form data-form="ubicacion" data-id="{{registro}}">
+          <div class="field-grid">
+            <div class="field">
+              <label for="nombre">Nombre *</label>
+              <input
+                class="form-control"
+                id="nombre"
+                name="nombre"
+                type="text"
+                value="{{nombre}}"
+                required
+              />
+            </div>
+            <div class="field">
+              <label for="sede_id">Sede *</label>
+              <select class="form-select" id="sede_id" name="sede_id" required>
+                <option value="">Seleccionar</option>
+                {{opciones_sede_id}}
+              </select>
+            </div>
+            <div class="field">
+              <label for="tipo">Tipo de espacio *</label>
+              <input
+                class="form-control"
+                id="tipo"
+                name="tipo"
+                type="text"
+                value="{{tipo}}"
+                required
+              />
+            </div>
+            <div class="field field-wide">
+              <label for="descripcion">Descripción</label>
+              <textarea class="form-control" id="descripcion" name="descripcion" maxlength="4000">
+{{descripcion}}</textarea>
+            </div>
+          </div>
+          <div class="form-footer">
+            {{cancelar}}
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <noscript>Activa JavaScript para consultar los datos del inventario.</noscript>
   </body>
 </html>

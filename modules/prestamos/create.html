@@ -2,15 +2,94 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>InventIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="../../" />
+    <title>Préstamos · InventIC</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/app.css" />
+    <link rel="stylesheet" href="assets/static.css" />
+    <link rel="stylesheet" href="assets/interface.css" />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="assets/theme.js"></script>
+    <script src="assets/api.js" defer></script>
+    <script src="assets/views.js" defer></script>
+    <script src="assets/validation.js" defer></script>
+    <script src="assets/store.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/app.js" defer></script>
   </head>
-  <body>
-    <p><a id="destination" href="../../index.html#/prestamos/create">Abrir InventIC</a></p>
-    <script>
-      const dest = document.getElementById('destination');
-      dest.href += location.search;
-      location.replace(dest.href);
-    </script>
+  <body data-page="prestamos/create">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div id="app">
+      <main class="surface connection-error">
+        <h1>Préstamos</h1>
+        <p>Cargando datos…</p>
+      </main>
+    </div>
+    <template id="contenido">
+      <header class="page-title-box">
+        <div>
+          <h1 class="page-title">Registrar préstamo</h1>
+          <p>Solo se pueden prestar equipos disponibles</p>
+        </div>
+        <div class="page-actions"></div>
+      </header>
+      <section class="surface">
+        <form data-form="prestamo" data-id="">
+          <div class="field-grid">
+            <div class="field">
+              <label for="equipo_id">Equipo *</label>
+              <select class="form-select" id="equipo_id" name="equipo_id" required>
+                <option value="">Seleccionar</option>
+                {{opciones_equipo_id}}
+              </select>
+            </div>
+            <div class="field">
+              <label for="usuario_id">Prestatario *</label>
+              <select class="form-select" id="usuario_id" name="usuario_id" required>
+                <option value="">Seleccionar</option>
+                {{opciones_usuario_id}}
+              </select>
+            </div>
+            <div class="field">
+              <label for="fecha_prestamo">Fecha de salida *</label>
+              <input
+                class="form-control"
+                id="fecha_prestamo"
+                name="fecha_prestamo"
+                type="date"
+                value="{{fecha_prestamo}}"
+                required
+              />
+            </div>
+            <div class="field">
+              <label for="fecha_devolucion">Devolución prevista *</label>
+              <input
+                class="form-control"
+                id="fecha_devolucion"
+                name="fecha_devolucion"
+                type="date"
+                value="{{fecha_devolucion}}"
+                required
+              />
+            </div>
+            <div class="field field-wide">
+              <label for="observaciones">Observaciones</label>
+              <textarea
+                class="form-control"
+                id="observaciones"
+                name="observaciones"
+                maxlength="4000"
+              ></textarea>
+            </div>
+          </div>
+          <div class="form-footer">
+            {{cancelar}}
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <noscript>Activa JavaScript para consultar los datos del inventario.</noscript>
   </body>
 </html>

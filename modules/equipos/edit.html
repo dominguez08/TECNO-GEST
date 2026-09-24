@@ -2,15 +2,179 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>InventIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="../../" />
+    <title>Editar equipo · InventIC</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/app.css" />
+    <link rel="stylesheet" href="assets/static.css" />
+    <link rel="stylesheet" href="assets/interface.css" />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="assets/theme.js"></script>
+    <script src="assets/api.js" defer></script>
+    <script src="assets/views.js" defer></script>
+    <script src="assets/validation.js" defer></script>
+    <script src="assets/store.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/app.js" defer></script>
   </head>
-  <body>
-    <p><a id="destination" href="../../index.html#/equipos/edit">Abrir InventIC</a></p>
-    <script>
-      const dest = document.getElementById('destination');
-      dest.href += location.search;
-      location.replace(dest.href);
-    </script>
+  <body data-page="equipos/edit">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div id="app">
+      <main class="surface connection-error">
+        <h1>Inventario</h1>
+        <p>Cargando datos…</p>
+      </main>
+    </div>
+    <template id="contenido">
+      <header class="page-title-box">
+        <div>
+          <h1 class="page-title">Editar equipo</h1>
+          <p>Completa los datos del equipo</p>
+        </div>
+        <div class="page-actions"></div>
+      </header>
+      <section class="surface">
+        <form data-form="equipo" data-id="{{registro}}">
+          <div class="field-grid">
+            <div class="field">
+              <label for="codigo">Código *</label>
+              <input
+                class="form-control"
+                id="codigo"
+                name="codigo"
+                type="text"
+                value="{{codigo}}"
+                required
+                maxlength="50"
+              />
+            </div>
+            <div class="field">
+              <label for="nombre">Nombre *</label>
+              <input
+                class="form-control"
+                id="nombre"
+                name="nombre"
+                type="text"
+                value="{{nombre}}"
+                required
+                maxlength="100"
+              />
+            </div>
+            <div class="field">
+              <label for="tipo_id">Categoría *</label>
+              <select class="form-select" id="tipo_id" name="tipo_id" required>
+                <option value="">Seleccionar</option>
+                {{opciones_tipo_id}}
+              </select>
+            </div>
+            <div class="field">
+              <label for="marca">Marca</label>
+              <input class="form-control" id="marca" name="marca" type="text" value="{{marca}}" />
+            </div>
+            <div class="field">
+              <label for="modelo">Modelo</label>
+              <input
+                class="form-control"
+                id="modelo"
+                name="modelo"
+                type="text"
+                value="{{modelo}}"
+              />
+            </div>
+            <div class="field">
+              <label for="numero_serie">Número de serie</label>
+              <input
+                class="form-control"
+                id="numero_serie"
+                name="numero_serie"
+                type="text"
+                value="{{numero_serie}}"
+              />
+            </div>
+            <div class="field">
+              <label for="ubicacion_id">Ubicación *</label>
+              <select class="form-select" id="ubicacion_id" name="ubicacion_id" required>
+                <option value="">Seleccionar</option>
+                {{opciones_ubicacion_id}}
+              </select>
+            </div>
+            <div class="field">
+              <label for="responsable_id">Responsable</label>
+              <select class="form-select" id="responsable_id" name="responsable_id">
+                <option value="">Seleccionar</option>
+                {{opciones_responsable_id}}
+              </select>
+            </div>
+            <div class="field">
+              <label for="estado">Estado *</label>
+              <select class="form-select" id="estado" name="estado" required>
+                <option value="">Seleccionar</option>
+                {{opciones_estado}}
+              </select>
+            </div>
+            <div class="field">
+              <label for="fecha_adquisicion">Fecha de adquisición</label>
+              <input
+                class="form-control"
+                id="fecha_adquisicion"
+                name="fecha_adquisicion"
+                type="date"
+                value="{{fecha_adquisicion}}"
+              />
+            </div>
+            <div class="field">
+              <label for="precio">Precio</label>
+              <input
+                class="form-control"
+                id="precio"
+                name="precio"
+                type="number"
+                value="{{precio}}"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div class="field">
+              <label for="proveedor">Proveedor</label>
+              <input
+                class="form-control"
+                id="proveedor"
+                name="proveedor"
+                type="text"
+                value="{{proveedor}}"
+              />
+            </div>
+            <div class="field field-wide">
+              <label for="observaciones">Observaciones</label>
+              <textarea
+                class="form-control"
+                id="observaciones"
+                name="observaciones"
+                maxlength="4000"
+              >
+{{observaciones}}</textarea>
+            </div>
+            <div class="field">
+              <label for="fotografia">Fotografía (JPG, PNG o WebP, máximo 3 MB)</label>
+              <input
+                class="form-control"
+                id="fotografia"
+                name="fotografia"
+                type="file"
+                value=""
+                accept="image/jpeg,image/png,image/webp"
+              />
+            </div>
+            {{contenido}}
+          </div>
+          <div class="form-footer">
+            {{cancelar}}
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <noscript>Activa JavaScript para consultar los datos del inventario.</noscript>
   </body>
 </html>

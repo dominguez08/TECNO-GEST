@@ -84,9 +84,11 @@ const server = http.createServer(async (request, response) => {
       const origin = request.headers.origin;
       const allowedOrigins = new Set([
         `http://localhost:${port}`,
-        'http://localhost:5500',
+        `http://localhost:${Number(process.env.LIVE_SERVER_PORT || 5500)}`,
+        'http://localhost:5501',
         `http://127.0.0.1:${port}`,
-        'http://127.0.0.1:5500'
+        `http://127.0.0.1:${Number(process.env.LIVE_SERVER_PORT || 5500)}`,
+        'http://127.0.0.1:5501'
       ]);
       if (allowedOrigins.has(origin)) {
         response.setHeader('Access-Control-Allow-Origin', origin);

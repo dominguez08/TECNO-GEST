@@ -2,15 +2,111 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>InventIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="../" />
+    <title>Iniciar sesión · InventIC</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/app.css" />
+    <link rel="stylesheet" href="assets/static.css" />
+    <link rel="stylesheet" href="assets/interface.css" />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="assets/theme.js"></script>
+    <script src="assets/api.js" defer></script>
+    <script src="assets/views.js" defer></script>
+    <script src="assets/validation.js" defer></script>
+    <script src="assets/store.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/app.js" defer></script>
   </head>
-  <body>
-    <p><a id="destination" href="../index.html#/login/index">Abrir InventIC</a></p>
-    <script>
-      const dest = document.getElementById('destination');
-      dest.href += location.search;
-      location.replace(dest.href);
-    </script>
+  <body data-page="login/index">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div id="app">
+      <main class="surface connection-error">
+        <h1>Iniciar sesión</h1>
+        <p>Cargando datos…</p>
+      </main>
+    </div>
+    <template id="contenido">
+      <main class="login-layout">
+        <section class="login-intro">
+          <a class="login-brand" href="#/login/index">
+            <img src="assets/logo.svg" alt="Logo de InventIC" />
+            <span>{{nombreSistema}}</span>
+          </a>
+          <div class="login-intro-copy">
+            <span class="eyebrow">INVENTARIO INSTITUCIONAL</span>
+            <h1>
+              Todo tu equipo,
+              <br />
+              en un solo lugar.
+            </h1>
+            <p>Organiza el inventario, consulta los préstamos y da seguimiento al mantenimiento.</p>
+            <div class="login-feature">
+              <span aria-hidden="true">✓</span>
+              Inventario actualizado
+            </div>
+            <div class="login-feature">
+              <span aria-hidden="true">✓</span>
+              Control de préstamos
+            </div>
+            <div class="login-feature">
+              <span aria-hidden="true">✓</span>
+              Seguimiento de incidencias
+            </div>
+          </div>
+          <p class="login-institution">{{institucion}}</p>
+        </section>
+        <section class="login-form-panel">
+          <div class="login-form-content">
+            <span class="eyebrow">BIENVENIDO A INVENTIC</span>
+            <h2>{{tituloAcceso}}</h2>
+            <p>{{instrucciones}}</p>
+            <div id="message" aria-live="polite"></div>
+            <form data-form="{{tipoFormulario}}">
+              {{campoNombre}}
+              <div class="field">
+                <label for="email">Correo electrónico *</label>
+                <input
+                  class="form-control"
+                  id="email"
+                  name="email"
+                  type="email"
+                  value=""
+                  required
+                  maxlength="100"
+                  autocomplete="username"
+                />
+              </div>
+              <div class="field">
+                <label for="password">Contraseña *</label>
+                <input
+                  class="form-control"
+                  id="password"
+                  name="password"
+                  type="password"
+                  value=""
+                  required
+                  minlength="8"
+                  maxlength="128"
+                  autocomplete="{{autocompletar}}"
+                />
+              </div>
+              <button
+                class="password-toggle"
+                type="button"
+                data-action="toggle-password"
+                aria-pressed="false"
+              >
+                Mostrar contraseña
+              </button>
+              {{confirmacion}}
+              <button class="btn btn-primary login-submit" type="submit">{{textoBoton}}</button>
+            </form>
+            <p class="login-help">{{ayuda}}</p>
+          </div>
+        </section>
+      </main>
+    </template>
+    <noscript>Activa JavaScript para consultar los datos del inventario.</noscript>
   </body>
 </html>

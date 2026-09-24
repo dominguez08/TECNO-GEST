@@ -4,14 +4,14 @@ Sistema de inventario institucional con interfaz HTML, CSS y JavaScript, servido
 
 ## Cómo iniciar
 
-1. Ejecuta `Iniciar InventIC.cmd` o `npm start` desde esta carpeta.
+1. En VS Code, abre `InventIC.code-workspace` y pulsa **F5**. Inicia el servidor y abre el navegador. También puedes ejecutar `Iniciar InventIC.cmd` o `npm start` desde esta carpeta.
 2. Abre **http://localhost:3000**.
 3. En el primer acceso, crea tu cuenta administradora con nombre, correo y contraseña. No hay credenciales predeterminadas.
 4. En los siguientes accesos, inicia sesión con esa cuenta.
 
 El iniciador usa MySQL 8 de WAMP y una instancia independiente en el puerto 3307. La base nueva se llama `inventic_html`; sus archivos están en `mysql-data/`. No modifica la base anterior de WAMP. La conexión del servidor se configura en `.env`. `MYSQL_BIN` permite indicar otra ubicación de `mysqld.exe`.
 
-La aplicación debe abrirse desde el servidor Node, no haciendo doble clic en `index.html` ni desde el puerto de Apache: los formularios necesitan la API para consultar y guardar información en MySQL. Mantén abierta la consola mientras uses la aplicación.
+Mantén el servidor en ejecución mientras uses la aplicación. Live Server (puerto 5500 o 5501) puede mostrar la interfaz y conectarse al servidor en el puerto 3000, pero no inicia Node ni MySQL. Si ves un error de localhost, pulsa F5 o ejecuta `npm start`; abrir un HTML con doble clic no inicia el servidor.
 
 ## Funciones
 
@@ -19,7 +19,7 @@ La aplicación debe abrirse desde el servidor Node, no haciendo doble clic en `i
 - Usuarios con roles Administrador, Técnico y Docente. Los permisos de escritura se revisan también en el servidor.
 - Panel, inventario, fotografías, registro y edición de equipos.
 - Préstamos, devoluciones, fallas y mantenimiento.
-- Configuración separada en General, Usuarios y roles, Categorías, Sedes y Respaldos.
+- Configuración separada en Apariencia, Usuarios y roles, Categorías, Sedes y Respaldos.
 - Edición de perfil, apariencia y cambio de contraseña con comprobación de la contraseña actual.
 - Búsqueda, filtros, exportación CSV e impresión de reportes.
 - Respaldos JSON de registros y configuración. No contienen contraseñas. Las fotografías iniciales utilizan `assets/images/`; las imágenes subidas se incluyen en los datos. Conserva también esa carpeta al trasladar el proyecto.
@@ -31,7 +31,11 @@ Al restaurar, las contraseñas de las cuentas existentes se conservan por identi
 | Archivo o carpeta | Función |
 | --- | --- |
 | `index.html` | Página principal y carga de archivos |
-| `assets/app.js` | Vistas, formularios y navegación |
+| `modules/**/*.html` | Estructura propia de cada pantalla: encabezados, formularios y campos |
+| `auth/login.html` | Estructura de la pantalla de acceso |
+| `assets/app.js` | Datos de las pantallas, navegación y eventos de formularios |
+| `assets/views.js` | Carga las plantillas HTML y completa sus valores dinámicos |
+| `assets/api.js` | Detecta el servidor y gestiona errores de conexión |
 | `assets/auth.js` | Solicitudes de inicio y cierre de sesión |
 | `assets/store.js` | Lectura y guardado mediante la API |
 | `assets/validation.js` | Validaciones compartidas por cliente y servidor |
@@ -46,6 +50,8 @@ Al restaurar, las contraseñas de las cuentas existentes se conservan por identi
 | `tests/mysql-smoke.cjs` | Pruebas en una base temporal independiente |
 
 Los archivos están indentados y organizados en varias líneas. `npm run format` aplica el formato definido en `.prettierrc.json`.
+
+Cada HTML contiene su estructura dentro de un elemento `template`. Las marcas como `{{nombre}}` se completan con los datos de MySQL; las listas y tablas las prepara JavaScript. Para cambiar un formulario, edita el HTML de su módulo. El CSS de `assets/theme.css` define una paleta para claro y otra para oscuro.
 
 ## Datos y seguridad
 

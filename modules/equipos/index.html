@@ -2,15 +2,73 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>InventIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="../../" />
+    <title>Inventario · InventIC</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/app.css" />
+    <link rel="stylesheet" href="assets/static.css" />
+    <link rel="stylesheet" href="assets/interface.css" />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="assets/theme.js"></script>
+    <script src="assets/api.js" defer></script>
+    <script src="assets/views.js" defer></script>
+    <script src="assets/validation.js" defer></script>
+    <script src="assets/store.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/app.js" defer></script>
   </head>
-  <body>
-    <p><a id="destination" href="../../index.html#/equipos/index">Abrir InventIC</a></p>
-    <script>
-      const dest = document.getElementById('destination');
-      dest.href += location.search;
-      location.replace(dest.href);
-    </script>
+  <body data-page="equipos/index">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div id="app">
+      <main class="surface connection-error">
+        <h1>Inventario</h1>
+        <p>Cargando datos…</p>
+      </main>
+    </div>
+    <template id="contenido">
+      <header class="page-title-box">
+        <div>
+          <h1 class="page-title">Inventario</h1>
+          <p>Control y seguimiento de equipos</p>
+        </div>
+        <div class="page-actions">{{button}} {{link}}</div>
+      </header>
+      <form data-form="filters" class="filter-form">
+        <div class="field">
+          <label for="q">Buscar</label>
+          <input class="form-control" id="q" name="q" type="text" value="{{q}}" />
+        </div>
+        <div class="field">
+          <label for="tipo_id">Categoría</label>
+          <select class="form-select" id="tipo_id" name="tipo_id">
+            <option value="">Seleccionar</option>
+            {{opciones_tipo_id}}
+          </select>
+        </div>
+        <div class="field">
+          <label for="sede_id">Sede</label>
+          <select class="form-select" id="sede_id" name="sede_id">
+            <option value="">Seleccionar</option>
+            {{opciones_sede_id}}
+          </select>
+        </div>
+        <div class="field">
+          <label for="estado">Estado</label>
+          <select class="form-select" id="estado" name="estado">
+            <option value="">Seleccionar</option>
+            {{opciones_estado}}
+          </select>
+        </div>
+        <button class="btn btn-primary">Filtrar</button>
+        {{limpiar}}
+      </form>
+      {{table}}
+      <div class="pagination-bar">
+        <span>{{contenido}} equipos · Página {{page}} de {{pages}}</span>
+        {{contenido2}}{{contenido3}}
+      </div>
+    </template>
+    <noscript>Activa JavaScript para consultar los datos del inventario.</noscript>
   </body>
 </html>

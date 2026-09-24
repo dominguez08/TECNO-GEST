@@ -2,15 +2,126 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>InventIC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="../../" />
+    <title>Configuración · InventIC</title>
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/app.css" />
+    <link rel="stylesheet" href="assets/static.css" />
+    <link rel="stylesheet" href="assets/interface.css" />
+    <link rel="stylesheet" href="assets/theme.css" />
+    <script src="assets/theme.js"></script>
+    <script src="assets/api.js" defer></script>
+    <script src="assets/views.js" defer></script>
+    <script src="assets/validation.js" defer></script>
+    <script src="assets/store.js" defer></script>
+    <script src="assets/auth.js" defer></script>
+    <script src="assets/app.js" defer></script>
   </head>
-  <body>
-    <p><a id="destination" href="../../index.html#/configuracion/index">Abrir InventIC</a></p>
-    <script>
-      const dest = document.getElementById('destination');
-      dest.href += location.search;
-      location.replace(dest.href);
-    </script>
+  <body data-page="configuracion/index">
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div id="app">
+      <main class="surface connection-error">
+        <h1>Configuración</h1>
+        <p>Cargando datos…</p>
+      </main>
+    </div>
+    <template id="navegacion">
+      <nav class="settings-tabs" aria-label="Secciones de configuración">{{contenido}}</nav>
+    </template>
+    <template id="apariencia">
+      <div class="settings-layout">
+        <section class="surface settings-main">
+          <h2>Apariencia</h2>
+          <p class="section-description">Elige cómo ver InventIC en este dispositivo.</p>
+          <div class="theme-options" role="group" aria-label="Tema de la aplicación">
+            <button type="button" class="btn btn-light" data-theme-choice="light">Claro</button>
+            <button type="button" class="btn btn-light" data-theme-choice="dark">Oscuro</button>
+          </div>
+        </section>
+        <aside class="surface settings-summary">
+          <h2>Tu organización</h2>
+          {{details}} {{link}}
+        </aside>
+      </div>
+    </template>
+    <template id="usuarios">
+      <section class="surface">
+        <div class="section-header">
+          <div>
+            <h2>Usuarios y permisos</h2>
+            <p class="section-description">
+              Administra las cuentas que pueden ingresar al sistema.
+            </p>
+          </div>
+          {{link}}
+        </div>
+        {{table}}
+      </section>
+    </template>
+    <template id="catalogos">
+      <div class="settings-layout">
+        <section class="surface settings-main">
+          <h2>{{contenido}}</h2>
+          {{table}}
+        </section>
+        <section class="surface">
+          <h2>{{contenido2}} {{contenido3}}</h2>
+          <form data-form="{{valor}}" data-id="{{registro}}">
+            <div class="field-grid">
+              <div class="field">
+                <label for="nombre">Nombre *</label>
+                <input
+                  class="form-control"
+                  id="nombre"
+                  name="nombre"
+                  type="text"
+                  value="{{nombre}}"
+                  required
+                  maxlength="100"
+                />
+              </div>
+              {{contenido4}}
+            </div>
+            <div class="form-footer">
+              {{cancelar}}
+              <button class="btn btn-primary" type="submit">Guardar</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </template>
+    <template id="respaldos">
+      <div class="panel-grid">
+        <section class="surface backup-card">
+          <span class="eyebrow">EXPORTAR</span>
+          <h2>Descargar un respaldo</h2>
+          <p>
+            Guarda una copia de los registros y la configuración. Las contraseñas no se incluyen.
+          </p>
+          {{button}}
+        </section>
+        <section class="surface backup-card">
+          <span class="eyebrow">RESTAURAR</span>
+          <h2>Importar un respaldo</h2>
+          <p>
+            Esta operación reemplaza los registros actuales. Descarga una copia antes de continuar.
+          </p>
+          <form data-form="import">
+            <label class="form-label" for="backup">Archivo JSON · máximo 20 MB</label>
+            <input
+              class="form-control"
+              id="backup"
+              name="backup"
+              type="file"
+              accept=".json,application/json"
+              required
+            />
+            <button class="btn btn-light" type="submit">Importar respaldo</button>
+          </form>
+        </section>
+      </div>
+    </template>
+    <noscript>Activa JavaScript para consultar los datos del inventario.</noscript>
   </body>
 </html>

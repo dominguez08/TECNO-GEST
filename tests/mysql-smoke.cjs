@@ -26,6 +26,15 @@ const adminPassword = JSON.parse(
   let serverOutput = '';
   try {
     await install(sql, databaseName);
+    liveServer = require('node:http').createServer((request, response) => {
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.end('<!doctype html><title>Live Server</title>');
+    });
+    await new Promise((resolve, reject) => {
+      liveServer.once('error', reject);
+      liveServer.listen(0, '127.0.0.1', resolve);
+    });
+    const livePort = liveServer.address().port;
     const socket = net.createServer();
     await new Promise((resolve) => socket.listen(0, '127.0.0.1', resolve));
     const port = socket.address().port;
@@ -38,7 +47,8 @@ const adminPassword = JSON.parse(
         DB_NAME: databaseName,
         DB_USER: 'root',
         DB_PASS: adminPassword,
-        PORT: String(port)
+        PORT: String(port),
+        LIVE_SERVER_PORT: String(livePort)
       },
       windowsHide: true
     });
@@ -99,6 +109,9 @@ const adminPassword = JSON.parse(
     const shot = async (name) => {
       if (!process.env.QA_SCREEN_DIR) return;
       fs.mkdirSync(process.env.QA_SCREEN_DIR, { recursive: true });
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      );
       await page.screenshot({
         path: path.join(process.env.QA_SCREEN_DIR, name + '.png'),
         fullPage: false
@@ -116,8 +129,24 @@ const adminPassword = JSON.parse(
     assert.equal((await read()).equipos.length, 23);
     assert.ok((await read()).usuarios.every((user) => !('password' in user)));
     await shot('panel');
+    await page.getByRole('button', { name: '☾ Modo oscuro', exact: true }).click();
+    await shot('panel-dark');
+    const darkCard = await page
+      .locator('.metric-card strong')
+      .first()
+      .evaluate((element) => getComputedStyle(element).color);
+    assert.equal(darkCard, 'rgb(232, 238, 247)');
+    await page.getByRole('button', { name: '☀ Modo claro', exact: true }).click();
+    const lightCard = await page
+      .locator('.metric-card strong')
+      .first()
+      .evaluate((element) => getComputedStyle(element).color);
+    assert.equal(lightCard, 'rgb(24, 43, 69)');
     await logout();
     await shot('login');
+    await page.getByRole('button', { name: '☾ Modo oscuro', exact: true }).click();
+    await shot('login-dark');
+    await page.getByRole('button', { name: '☀ Modo claro', exact: true }).click();
     await page.getByLabel('Correo electrónico *').fill('admin@example.test');
     await page.getByLabel('Contraseña *', { exact: true }).fill('Incorrecta123');
     await page.getByRole('button', { name: 'Entrar', exact: true }).click();
@@ -278,20 +307,29 @@ const adminPassword = JSON.parse(
       .getByRole('heading', { name: 'Prueba <img src=x onerror=alert(1)>', exact: true })
       .waitFor();
     assert.equal(await page.locator('img[src=x]').count(), 0);
+    for (const [file, heading] of [
+      ['equipos/create', 'Registrar equipo'],
+      ['equipos/edit?id=' + equipment.id, 'Editar equipo'],
+      ['ubicaciones/create', 'Nueva ubicación'],
+      ['usuarios/create', 'Nuevo usuario'],
+      ['prestamos/create', 'Registrar préstamo']
+    ]) {
+      const [filePath, query = ''] = file.split('?');
+      await page.goto(base + '/modules/' + filePath + '.html' + (query ? '?' + query : ''));
+      await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+      assert.equal(await page.locator('form[data-form] button[type="submit"]').count(), 1);
+    }
+    for (const width of [320, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      await visit('configuracion/index', 'Configuración');
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
     await page.setViewportSize({ width: 1440, height: 960 });
     await logout();
     const second = await browser.newContext();
     assert.equal((await second.request.get(base + '/api/data')).status(), 401);
     await second.close();
     // Comprueba cookies y preflight desde Live Server con ambos nombres locales.
-    liveServer = require('node:http').createServer((request, response) => {
-      response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end('<!doctype html><title>Live Server</title>');
-    });
-    await new Promise((resolve, reject) => {
-      liveServer.once('error', reject);
-      liveServer.listen(5500, '127.0.0.1', resolve);
-    });
     for (const hostname of ['127.0.0.1', 'localhost']) {
       const live = await browser.newContext();
       const livePage = await live.newPage();
@@ -299,8 +337,8 @@ const adminPassword = JSON.parse(
       livePage.on('console', (message) => {
         if (message.type() === 'error') console.error(message.text());
       });
-      await livePage.goto(`http://${hostname}:5500/index.html`);
-      for (const filename of ['validation.js', 'auth.js', 'store.js']) {
+      await livePage.goto(`http://${hostname}:${livePort}/index.html`);
+      for (const filename of ['api.js', 'validation.js', 'auth.js', 'store.js']) {
         const source = fs.readFileSync(path.join(root, 'assets', filename), 'utf8');
         await livePage.addScriptTag({ content: source.replaceAll(':3000/api', `:${port}/api`) });
       }
