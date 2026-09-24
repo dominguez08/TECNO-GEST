@@ -9,6 +9,9 @@
   "name": "inventic",
   "version": "2.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "description": "Inventario institucional con HTML, JavaScript y MySQL",
   "scripts": {
     "start": "node tools/start.cjs",

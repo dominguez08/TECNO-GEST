@@ -1,0 +1,48 @@
+services:
+  database:
+    image: mysql:8.4
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_DATABASE: inventic_html
+      MYSQL_USER: inventic_app
+      MYSQL_PASSWORD: ${INVENTIC_DB_PASSWORD:?Utiliza Iniciar con Docker.cmd para generar la configuración}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u$$MYSQL_USER -D $$MYSQL_DATABASE -e 'SELECT 1' >/dev/null 2>&1"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+  app:
+    build: .
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: inventic_html
+      DB_USER: inventic_app
+      DB_PASS: ${INVENTIC_DB_PASSWORD}
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/session').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  mysql-data:

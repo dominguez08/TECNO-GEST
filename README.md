@@ -2,16 +2,37 @@
 
 Sistema de inventario institucional con interfaz HTML, CSS y JavaScript, servidor Node.js y base de datos MySQL. No utiliza PHP.
 
-## Cómo iniciar
+## Descargar y abrir en otra laptop
 
-1. En VS Code, abre `InventIC.code-workspace` y pulsa **F5**. Inicia el servidor y abre el navegador. También puedes ejecutar `Iniciar InventIC.cmd` o `npm start` desde esta carpeta.
-2. Abre **http://localhost:3000**.
-3. En el primer acceso, crea tu cuenta administradora con nombre, correo y contraseña. No hay credenciales predeterminadas.
-4. En los siguientes accesos, inicia sesión con esa cuenta.
+Descarga el ZIP de GitHub y **extrae toda la carpeta** antes de iniciar. No ejecutes los archivos dentro del ZIP ni abras `index.html` con doble clic.
 
-El iniciador usa MySQL 8 de WAMP y una instancia independiente en el puerto 3307. La base nueva se llama `inventic_html`; sus archivos están en `mysql-data/`. No modifica la base anterior de WAMP. La conexión del servidor se configura en `.env`. `MYSQL_BIN` permite indicar otra ubicación de `mysqld.exe`.
+### Windows con Node.js y MySQL
+
+1. Instala [Node.js 22 o superior](https://nodejs.org/) y MySQL 8 (también sirve el MySQL incluido en WAMP). Si acabas de instalarlos, vuelve a abrir VS Code.
+2. Haz doble clic en **Iniciar InventIC.cmd**. También puedes abrir `InventIC.code-workspace` en VS Code y pulsar **F5**, o ejecutar `npm start`.
+3. La primera vez se descargan las dependencias, se crea una instancia MySQL independiente, se carga el catálogo inicial y se genera `.env` con contraseñas aleatorias. Necesitas Internet para descargar las dependencias.
+4. Abre la dirección que indica la consola, normalmente **http://localhost:3000**. Si ese puerto estaba ocupado al instalar, se elige otro libre.
+5. Crea la cuenta administradora de esa laptop. No hay correo ni contraseña predeterminados.
+
+El iniciador busca MySQL en PATH, en las carpetas habituales de WAMP y en Program Files/MySQL; no depende de una versión concreta de WAMP. Para otra ubicación, define `MYSQL_BIN` con la ruta de `mysqld.exe`. La base nueva se llama `inventic_html`; los archivos se guardan en `mysql-data/` dentro del proyecto. Se utiliza un puerto libre a partir de 3307 y no se alteran las bases de otros programas.
+
+En los siguientes inicios se conservan la cuenta, los datos y la configuración. Si tienes un `.env` propio, se respeta: ese servidor MySQL debe existir y estar disponible. No borres `.env`, `.runtime/` ni `mysql-data/` de una instalación que ya tenga datos.
+
+### Alternativa con Docker Desktop
+
+Esta opción incluye Node y MySQL dentro de los contenedores; no necesitas instalarlos por separado.
+
+1. Instala y abre [Docker Desktop](https://www.docker.com/products/docker-desktop/), con contenedores Linux.
+2. Ejecuta **Iniciar con Docker.cmd**. La primera vez descarga las imágenes, genera `.docker.env`, construye la aplicación y crea la base. Necesita Internet y puede tardar varios minutos.
+3. Cuando aparezca «InventIC disponible», abre **http://localhost:3000** y crea tu cuenta.
+
+Para detener esta instalación: `docker compose --env-file .docker.env down`. Los datos permanecen en el volumen de Docker. Conserva `.docker.env` para volver a conectar con esa base. Utiliza una sola opción de inicio a la vez: Docker y la instalación local necesitan el puerto 3000.
+
+La preparación de Docker usa la espera de servicios saludables de [Docker Compose](https://docs.docker.com/reference/cli/docker/compose/up/). La instalación local crea su directorio independiente mediante el procedimiento de [inicialización de MySQL](https://dev.mysql.com/doc/refman/8.0/en/data-directory-initialization.html).
 
 Mantén el servidor en ejecución mientras uses la aplicación. Live Server (puerto 5500 o 5501) puede mostrar la interfaz y conectarse al servidor en el puerto 3000, pero no inicia Node ni MySQL. Si ves un error de localhost, pulsa F5 o ejecuta `npm start`; abrir un HTML con doble clic no inicia el servidor.
+
+GitHub contiene el código y el catálogo inicial, no tus contraseñas ni tu base personal. Para trasladar registros de otra laptop, utiliza Configuración → Respaldos. Una instalación nueva empieza con su propia cuenta administradora.
 
 ## Funciones
 
@@ -47,6 +68,8 @@ Al restaurar, las contraseñas de las cuentas existentes se conservan por identi
 | `server/security.cjs` | Cálculo y comprobación de contraseñas |
 | `database.sql` | Tablas, claves y relaciones de la base nueva |
 | `tools/start.cjs` | Inicio de MySQL y del servidor |
+| `tools/setup.cjs` | Dependencias, detección de MySQL y preparación automática de una copia nueva |
+| `compose.yaml` | Instalación alternativa con Node y MySQL en Docker |
 | `tests/mysql-smoke.cjs` | Pruebas en una base temporal independiente |
 
 Los archivos están indentados y organizados en varias líneas. `npm run format` aplica el formato definido en `.prettierrc.json`.

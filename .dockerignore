@@ -1,0 +1,16 @@
+**
+!package.json
+!package-lock.json
+!assets
+!assets/**
+!auth
+!auth/**
+!modules
+!modules/**
+!server
+!server/**
+!tools
+!tools/install-database.cjs
+!tools/container-start.cjs
+!database.sql
+!index.html

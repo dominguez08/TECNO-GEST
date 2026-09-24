@@ -5,12 +5,16 @@ const vm = require('node:vm');
 const mysql = require('mysql2/promise');
 const root = path.resolve(__dirname, '..');
 
-async function install(connection, databaseName) {
+async function install(connection, databaseName, existingEmpty = false) {
   if (!/^[a-zA-Z0-9_]+$/.test(databaseName)) throw Error('Nombre de base de datos inválido.');
-  await connection.query(
-    `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-  );
+  if (!existingEmpty) {
+    await connection.query(
+      `CREATE DATABASE \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+    );
+  }
   await connection.query(`USE \`${databaseName}\``);
+  const [tables] = await connection.query('SHOW TABLES');
+  if (tables.length) throw Error('La base ya contiene tablas. No se reemplazará su contenido.');
   const schema = fs.readFileSync(path.join(root, 'database.sql'), 'utf8');
   for (const statement of schema
     .split(';')

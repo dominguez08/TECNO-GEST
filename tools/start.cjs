@@ -1,53 +1,35 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const net = require('node:net');
 const { spawn } = require('node:child_process');
+const {
+  ensureDependencies,
+  setup,
+  findMysql,
+  portOpen,
+  launchMysql,
+  waitForMysql
+} = require('./setup.cjs');
 const root = path.resolve(__dirname, '..');
 
-function portOpen(port) {
-  return new Promise((resolve) => {
-    const socket = net.connect(port, '127.0.0.1');
-    socket.once('connect', () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once('error', () => resolve(false));
-  });
-}
-
 async function start() {
+  await ensureDependencies(root);
   const envFile = path.join(root, '.env');
-  if (!fs.existsSync(envFile)) {
-    throw Error(
-      'Falta la configuración .env. Configura la conexión MySQL siguiendo README.md antes de iniciar.'
-    );
-  }
+  if (!fs.existsSync(envFile)) await setup(root);
   process.loadEnvFile(envFile);
   const appPort = Number(process.env.PORT || 3000);
-  if (!(await portOpen(3307))) {
-    const executable = process.env.MYSQL_BIN || 'C:/wamp64/bin/mysql/mysql8.0.31/bin/mysqld.exe';
-    if (!fs.existsSync(executable))
-      throw Error('No se encontró MySQL. Configura MYSQL_BIN con la ubicación de mysqld.exe.');
-    fs.mkdirSync(path.join(root, '.runtime'), { recursive: true });
-    const output = fs.openSync(path.join(root, '.runtime/mysql.log'), 'a');
-    const child = spawn(
-      executable,
-      [
-        '--no-defaults',
-        '--basedir=' + path.dirname(path.dirname(executable)),
-        '--datadir=' + path.join(root, 'mysql-data'),
-        '--port=3307',
-        '--bind-address=127.0.0.1',
-        '--mysqlx=0',
-        '--console'
-      ],
-      { detached: true, windowsHide: true, stdio: ['ignore', output, output] }
-    );
-    child.on('error', (error) => console.error(error.message));
-    child.unref();
-    for (let i = 0; i < 30 && !(await portOpen(3307)); i++)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    if (!(await portOpen(3307))) throw Error('MySQL no pudo iniciar. Revisa .runtime/mysql.log.');
+  const databasePort = Number(process.env.DB_PORT || 3307);
+  const databaseHost = process.env.DB_HOST || '127.0.0.1';
+  if (!(await portOpen(databasePort, databaseHost))) {
+    if (
+      !['127.0.0.1', 'localhost'].includes(databaseHost) ||
+      !fs.existsSync(path.join(root, 'mysql-data/auto.cnf'))
+    ) {
+      throw Error(
+        'El servidor MySQL configurado en .env no responde. Inicia ese servidor o revisa DB_HOST y DB_PORT.'
+      );
+    }
+    launchMysql(root, findMysql(), databasePort);
+    await waitForMysql(databasePort);
   }
 
   if (process.argv.includes('--database-only')) return;

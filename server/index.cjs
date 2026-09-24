@@ -4,7 +4,7 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
-process.loadEnvFile(path.join(root, '.env'));
+if (fs.existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
 
 const database = require('./database.cjs');
 const { verifyPassword } = require('./security.cjs');
@@ -214,7 +214,7 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(port, '127.0.0.1', () =>
+server.listen(port, process.env.HOST || '127.0.0.1', () =>
   console.log(`InventIC disponible en http://localhost:${port}`)
 );
 setInterval(() => {
