@@ -10,7 +10,7 @@ Descarga el ZIP de GitHub y **extrae toda la carpeta** antes de iniciar. No ejec
 
 1. Instala [Node.js 22 o superior](https://nodejs.org/) y MySQL 8 (también sirve el MySQL incluido en WAMP). Si acabas de instalarlos, vuelve a abrir VS Code.
 2. Haz doble clic en **Iniciar InventIC.cmd**. También puedes abrir `InventIC.code-workspace` en VS Code y pulsar **F5**, o ejecutar `npm start`.
-3. La primera vez se descargan las dependencias, se crea una instancia MySQL independiente, se carga el catálogo inicial y se genera `.env` con contraseñas aleatorias. Necesitas Internet para descargar las dependencias.
+3. La primera vez se descargan las dependencias, se crea una instancia MySQL independiente y vacía y se genera `.env` con contraseñas aleatorias. Necesitas Internet para descargar las dependencias.
 4. Abre la dirección que indica la consola, normalmente **http://localhost:3000**. Si ese puerto estaba ocupado al instalar, se elige otro libre.
 5. Crea la cuenta administradora de esa laptop. No hay correo ni contraseña predeterminados.
 
@@ -32,7 +32,11 @@ La preparación de Docker usa la espera de servicios saludables de [Docker Compo
 
 Mantén el servidor en ejecución mientras uses la aplicación. Live Server (puerto 5500 o 5501) puede mostrar la interfaz y conectarse al servidor en el puerto 3000, pero no inicia Node ni MySQL. Si ves un error de localhost, pulsa F5 o ejecuta `npm start`; abrir un HTML con doble clic no inicia el servidor.
 
-GitHub contiene el código y el catálogo inicial, no tus contraseñas ni tu base personal. Para trasladar registros de otra laptop, utiliza Configuración → Respaldos. Una instalación nueva empieza con su propia cuenta administradora.
+GitHub contiene el código y el esquema de las tablas, sin registros personales. Cada instalación nueva empieza vacía: crea tu cuenta administradora, agrega categorías y sedes en Configuración, crea ubicaciones y luego registra equipos. Los datos se guardan en el MySQL indicado por `.env`.
+
+Para una instalación independiente, descarga el código en una carpeta nueva. Copiar toda una instalación, incluido `mysql-data/`, también copia su base de datos. Conectar dos instalaciones al mismo servidor y a la misma base MySQL hace que compartan registros. Para trasladar registros deliberadamente, utiliza Configuración → Respaldos.
+
+Esta actualización no borra registros de bases existentes. Si la otra computadora ya recibió los datos precargados de una versión anterior, inicia una instalación limpia en una carpeta nueva para obtener una base vacía y conserva la anterior hasta verificar si contiene registros que necesitas.
 
 ## Si aparece un error de credenciales en otra computadora
 
@@ -50,7 +54,7 @@ GitHub contiene el código y el catálogo inicial, no tus contraseñas ni tu bas
 - Configuración separada en Apariencia, Usuarios y roles, Categorías, Sedes y Respaldos.
 - Edición de perfil, apariencia y cambio de contraseña con comprobación de la contraseña actual.
 - Búsqueda, filtros, exportación CSV e impresión de reportes.
-- Respaldos JSON de registros y configuración. No contienen contraseñas. Las fotografías iniciales utilizan `assets/images/`; las imágenes subidas se incluyen en los datos. Conserva también esa carpeta al trasladar el proyecto.
+- Respaldos JSON de registros y configuración. No contienen contraseñas. Las imágenes subidas se incluyen en los datos. En instalaciones antiguas puede haber fotografías referenciadas en `assets/images/`: consérvalas al trasladar sus registros. Esas fotografías personales ya no se distribuyen con el código.
 
 Al restaurar, las contraseñas de las cuentas existentes se conservan por identificador. Para cuentas restauradas que no existían, el administrador debe asignar nuevas contraseñas desde Usuarios. El respaldo debe conservar la cuenta administradora que realiza la operación.
 
@@ -85,7 +89,7 @@ Cada HTML contiene su estructura dentro de un elemento `template`. Las marcas co
 
 ## Datos y seguridad
 
-El catálogo inicial contiene los 23 equipos recuperados del proyecto y sus fotografías. No se importaron automáticamente las cuentas o el historial de la base anterior. Los respaldos SQL y archivos antiguos permanecen en `storage/`.
+El instalador crea solamente las tablas, los roles, los estados de incidencias y la configuración general. No importa equipos, fotografías, usuarios, sedes ni ubicaciones. La primera cuenta administradora se inserta en MySQL al registrarse. Reiniciar o actualizar una instalación conserva sus datos.
 
 Los datos de trabajo se guardan en MySQL, no en `localStorage`. Las contraseñas se almacenan con scrypt y una sal individual. La sesión usa una cookie HttpOnly y caduca a las ocho horas. Reiniciar el servidor requiere iniciar sesión nuevamente. Las transacciones revierten los cambios si una operación falla; una revisión de datos impide sobrescribir silenciosamente cambios de otra sesión.
 

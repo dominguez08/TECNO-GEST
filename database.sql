@@ -164,5 +164,6 @@ CREATE TABLE app_metadata (
 ) ENGINE=InnoDB;
 
 INSERT INTO app_metadata (id, revision) VALUES (1, 0);
+INSERT INTO configuracion (clave, valor) VALUES ('nombre', 'InventIC'), ('institucion', 'Mi institución'), ('moneda', 'USD');
 INSERT INTO roles (id, nombre) VALUES (1, 'Administrador'), (2, 'Técnico'), (3, 'Docente');
 INSERT INTO estados_reporte (id, nombre) VALUES (1, 'Pendiente'), (2, 'En revisión'), (3, 'En reparación'), (4, 'Reparado'), (5, 'Cerrado');

@@ -126,7 +126,8 @@ const adminPassword = JSON.parse(
     await page.getByLabel('Confirmar contraseña *').fill('Prueba123!');
     await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
     await page.getByRole('heading', { name: 'Panel', exact: true }).waitFor();
-    assert.equal((await read()).equipos.length, 23);
+    assert.equal((await read()).equipos.length, 0);
+    assert.equal((await read()).usuarios.length, 1);
     assert.ok((await read()).usuarios.every((user) => !('password' in user)));
     await shot('panel');
     await page.getByRole('button', { name: '☾ Modo oscuro', exact: true }).click();
@@ -186,6 +187,17 @@ const adminPassword = JSON.parse(
     await save();
     await page.getByRole('status').waitFor();
     assert.ok((await read()).tipos_equipo.some((row) => row.nombre === 'Categoría nueva'));
+
+    await visit('configuracion/index?tab=sedes', 'Configuración');
+    await page.getByLabel('Nombre *', { exact: true }).fill('Sede de prueba');
+    await save();
+    await page.getByRole('status').waitFor();
+    await visit('ubicaciones/create', 'Nueva ubicación');
+    await page.getByLabel('Nombre *', { exact: true }).fill('Ubicación de prueba');
+    await page.getByLabel('Sede *', { exact: true }).selectOption('1');
+    await page.getByLabel('Tipo de espacio *', { exact: true }).fill('Aula');
+    await save();
+    await page.waitForURL('**/#/ubicaciones/index');
 
     await visit('equipos/create', 'Registrar equipo');
     await page.getByLabel('Código *', { exact: true }).fill('TEST-001');
@@ -277,7 +289,7 @@ const adminPassword = JSON.parse(
     await page.getByRole('button', { name: 'Descargar respaldo JSON' }).click();
     const download = await downloadEvent;
     const backup = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    assert.equal(backup.equipos.length, 24);
+    assert.equal(backup.equipos.length, 1);
     assert.ok(backup.usuarios.every((user) => !user.password));
     await page.locator('#backup').setInputFiles({
       name: 'backup.json',
@@ -356,7 +368,7 @@ const adminPassword = JSON.parse(
       await live.close();
     }
     const [records] = await sql.query('SELECT COUNT(*) AS total FROM equipos');
-    assert.equal(records[0].total, 24);
+    assert.equal(records[0].total, 1);
     const [passwords] = await sql.query('SELECT password FROM usuarios');
     assert.ok(passwords.every((row) => row.password && !row.password.includes('Prueba123')));
     assert.deepEqual(errors, []);

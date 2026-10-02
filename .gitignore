@@ -13,3 +13,4 @@ mysql-data/
 .docker.env
 test-results/
 test-results*/
+assets/images/tec-*.jpg

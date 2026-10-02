@@ -84,7 +84,17 @@ function prepare() {
     assert.equal(response.status, 201);
     const cookie = response.headers.get('set-cookie').split(';')[0];
     const data = await (await fetch(url + '/api/data', { headers: { Cookie: cookie } })).json();
-    assert.equal(data.equipos.length, 23);
+    for (const table of ['equipos', 'sedes', 'ubicaciones', 'tipos_equipo', 'prestamos', 'reportes', 'mantenimientos', 'actividad']) {
+      assert.equal(data[table].length, 0, table + ' debe comenzar sin registros');
+    }
+    assert.equal(data.usuarios.length, 1);
+    assert.equal(data.usuarios[0].email, 'portable@example.test');
+    const repeatedSetup = await fetch(url + '/api/setup', {
+      method: 'POST',
+      headers: { Origin: url, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: 'Otro', email: 'otro@example.test', password: 'Portable123!', confirmation: 'Portable123!' })
+    });
+    assert.equal(repeatedSetup.status, 400);
     await prepare();
     assert.equal(fs.readFileSync(path.join(copy, '.env'), 'utf8'), configuration);
     assert.equal((await (await fetch(url + '/api/session')).json()).setup, false);

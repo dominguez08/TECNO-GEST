@@ -80,11 +80,19 @@ async function setupAdmin({ nombre, email, password, confirmation }) {
     );
     if (admins.some((admin) => admin.password))
       throw new Error('La cuenta administradora ya está configurada.');
-    const id = admins[0].id;
-    await connection.execute(
-      'UPDATE usuarios SET nombre = ?, email = ?, password = ? WHERE id = ?',
-      [nombre.trim(), email.trim().toLowerCase(), hash, id]
-    );
+    let id = admins[0]?.id;
+    if (id) {
+      await connection.execute(
+        'UPDATE usuarios SET nombre = ?, email = ?, password = ? WHERE id = ?',
+        [nombre.trim(), email.trim().toLowerCase(), hash, id]
+      );
+    } else {
+      const [result] = await connection.execute(
+        'INSERT INTO usuarios (nombre, email, password, rol_id) VALUES (?, ?, ?, 1)',
+        [nombre.trim(), email.trim().toLowerCase(), hash]
+      );
+      id = result.insertId;
+    }
     await connection.query('UPDATE app_metadata SET revision = revision + 1 WHERE id = 1');
     await connection.commit();
     return getUser(id);
