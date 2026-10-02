@@ -20,12 +20,18 @@ window.InventicApi = (() => {
         });
         if (!response.headers.get('content-type')?.includes('application/json')) continue;
         const result = await response.json();
-        if (!response.ok) throw Error(result.error || 'La base de datos no está disponible.');
+        if (!response.ok) {
+          const error = Error(result.error || 'La base de datos no está disponible.');
+          error.code = result.code;
+          throw error;
+        }
         if (!Object.hasOwn(result, 'setup')) continue;
         base = candidate;
         return;
       } catch (error) {
-        if (error.message.includes('base de datos')) throw error;
+        if (error.code?.startsWith('DATABASE_') || error.message.includes('base de datos')) {
+          throw error;
+        }
       }
     }
     throw Error(

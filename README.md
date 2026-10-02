@@ -34,6 +34,13 @@ Mantén el servidor en ejecución mientras uses la aplicación. Live Server (pue
 
 GitHub contiene el código y el catálogo inicial, no tus contraseñas ni tu base personal. Para trasladar registros de otra laptop, utiliza Configuración → Respaldos. Una instalación nueva empieza con su propia cuenta administradora.
 
+## Si aparece un error de credenciales en otra computadora
+
+- **«MySQL rechazó las credenciales…»** corresponde a la conexión del servidor, no a tu cuenta de InventIC. El archivo `.env` debe coincidir con el MySQL de esa computadora; copiar solamente el `.env` de otra instalación no crea allí el usuario ni la base.
+- Para empezar una instalación independiente, extrae el ZIP de GitHub en **una carpeta nueva** y ejecuta `Iniciar InventIC.cmd`. El iniciador genera su propia configuración. Conserva intacta la carpeta anterior si contiene datos; no borres `.env`, `.runtime/` ni `mysql-data/` para intentar reparar el acceso.
+- **«Correo o contraseña incorrectos»** corresponde al inicio de sesión de InventIC. Una instalación nueva permite crear su primera cuenta. Si aparece «Iniciar sesión», la base conectada ya tiene una cuenta administradora y debes utilizar una cuenta de esa instalación.
+- Abre la dirección que imprime la consola y mantenla abierta. No uses el HTML directamente ni una dirección de otra instalación.
+
 ## Funciones
 
 - Acceso con correo y contraseña, creación de la primera cuenta y cierre de sesión.
