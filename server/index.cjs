@@ -10,6 +10,7 @@ const database = require('./database.cjs');
 const { verifyPassword } = require('./security.cjs');
 const checkPermissions = require('./permissions.cjs');
 const validate = require('../assets/validation.js');
+const publicError = require('./errors.cjs');
 const sessions = new Map();
 const attempts = new Map();
 const port = Number(process.env.PORT || 3000);
@@ -206,11 +207,8 @@ const server = http.createServer(async (request, response) => {
     );
     response.end(request.method === 'HEAD' ? undefined : fs.readFileSync(file));
   } catch (error) {
-    const sqlError = Boolean(error.sqlState);
-    const message = sqlError
-      ? 'No se pudo guardar: revisa datos duplicados, longitudes y registros relacionados.'
-      : error.message;
-    send(response, error.status || (error.code === 'ECONNREFUSED' ? 503 : 400), { error: message });
+    const { status, ...body } = publicError(error);
+    send(response, status, body);
   }
 });
 
