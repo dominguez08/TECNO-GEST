@@ -126,7 +126,7 @@ const adminPassword = JSON.parse(
     await page.getByLabel('Confirmar contraseña *').fill('Prueba123!');
     await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
     await page.getByRole('heading', { name: 'Panel', exact: true }).waitFor();
-    assert.equal((await read()).equipos.length, 23);
+    assert.equal((await read()).equipos.length, 0);
     assert.ok((await read()).usuarios.every((user) => !('password' in user)));
     await shot('panel');
     await page.getByRole('button', { name: '☾ Modo oscuro', exact: true }).click();

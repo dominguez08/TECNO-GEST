@@ -3,8 +3,6 @@
   const root = document.documentElement;
   let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   try {
-    const saved = localStorage.getItem('inventic-theme');
-    if (saved === 'dark' || saved === 'light') theme = saved;
   } catch {}
   root.dataset.theme = theme;
   function updateButtons() {
@@ -33,9 +31,6 @@
     if (!button) return;
     theme = button.dataset.themeChoice || (theme === 'dark' ? 'light' : 'dark');
     root.dataset.theme = theme;
-    try {
-      localStorage.setItem('inventic-theme', theme);
-    } catch {}
     updateButtons();
   });
   window.addEventListener('inventic:render', mount);

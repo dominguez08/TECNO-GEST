@@ -180,7 +180,6 @@ const server = http.createServer(async (request, response) => {
     const allowed = relative === 'index.html' || /^(assets|modules|auth)\//.test(relative);
     if (
       !allowed ||
-      relative === 'assets/initial-data.js' ||
       !file.startsWith(root + path.sep) ||
       !fs.existsSync(file) ||
       !fs.statSync(file).isFile()

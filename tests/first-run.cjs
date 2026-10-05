@@ -84,7 +84,7 @@ function prepare() {
     assert.equal(response.status, 201);
     const cookie = response.headers.get('set-cookie').split(';')[0];
     const data = await (await fetch(url + '/api/data', { headers: { Cookie: cookie } })).json();
-    assert.equal(data.equipos.length, 23);
+    assert.equal(data.equipos.length, 0);
     await prepare();
     assert.equal(fs.readFileSync(path.join(copy, '.env'), 'utf8'), configuration);
     assert.equal((await (await fetch(url + '/api/session')).json()).setup, false);

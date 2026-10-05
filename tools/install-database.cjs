@@ -1,7 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const vm = require('node:vm');
 const mysql = require('mysql2/promise');
 const root = path.resolve(__dirname, '..');
 
@@ -22,30 +21,9 @@ async function install(connection, databaseName, existingEmpty = false) {
     .filter(Boolean)) {
     await connection.query(statement);
   }
-  const context = { window: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'assets/initial-data.js'), 'utf8'), context);
-  const initial = context.window.INVENTIC_INITIAL_DATA;
-  for (const table of ['sedes', 'tipos_equipo', 'usuarios', 'ubicaciones', 'equipos']) {
-    for (const original of initial[table]) {
-      const row = { ...original };
-      if (table === 'usuarios') row.password = '';
-      if (table === 'equipos') {
-        row.fecha_adquisicion ||= null;
-        row.precio ||= null;
-      }
-      const keys = Object.keys(row);
-      await connection.execute(
-        `INSERT INTO \`${table}\` (${keys.map((key) => `\`${key}\``).join(',')}) VALUES (${keys.map(() => '?').join(',')})`,
-        Object.values(row)
-      );
-    }
-  }
-  for (const [key, value] of Object.entries(initial.configuracion)) {
-    await connection.execute('INSERT INTO configuracion (clave, valor) VALUES (?, ?)', [
-      key,
-      value
-    ]);
-  }
+  await connection.query(
+    "INSERT INTO configuracion (clave, valor) VALUES ('nombre', 'InventIC'), ('institucion', 'Mi institución'), ('moneda', 'USD')"
+  );
 }
 
 async function main() {
@@ -76,7 +54,7 @@ async function main() {
       fs.mkdirSync(path.dirname(privateFile), { recursive: true });
       fs.writeFileSync(privateFile, JSON.stringify(admin));
     }
-    console.log('Base inventic_html creada: 23 equipos, 23 fotografías y configuración inicial.');
+    console.log('Base inventic_html creada vacía. Crea la primera cuenta para comenzar.');
   } finally {
     await connection.end();
   }
