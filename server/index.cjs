@@ -156,7 +156,7 @@ const server = http.createServer(async (request, response) => {
       }
       if (!user) return send(response, 401, { error: 'Inicia sesión para continuar.' });
       if (request.method === 'GET' && url.pathname === '/api/data')
-        return send(response, 200, await database.loadData());
+        return send(response, 200, await database.loadData(database.pool, user));
       if (request.method === 'PUT' && url.pathname === '/api/data') {
         const body = await readBody(request);
         const data = await database.saveData(
@@ -168,7 +168,7 @@ const server = http.createServer(async (request, response) => {
         );
         const current = await database.getUser(user.id);
         if (current.password !== user.password) startSession(request, response, current);
-        return send(response, 200, data);
+        return send(response, 200, Number(user.rol_id) === 3 ? await database.loadData(database.pool, user) : data);
       }
       return send(response, 404, { error: 'La operación no existe.' });
     }

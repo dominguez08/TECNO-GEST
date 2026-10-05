@@ -47,6 +47,7 @@ HOST=0.0.0.0
 
 - Inicio de sesión y creación de la primera cuenta administradora.
 - Roles Administrador, Técnico y Docente.
+- Portal de estudiante para consultar el tiempo restante de sus préstamos y reportar fallas de los equipos que tiene asignados.
 - Inventario de equipos, ubicaciones y sedes.
 - Préstamos y devoluciones.
 - Reportes de fallas y mantenimientos.

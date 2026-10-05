@@ -28,7 +28,7 @@ const pool = mysql.createPool({
 
 let columns;
 
-async function loadData(connection = pool) {
+async function loadData(connection = pool, actor = null) {
   const data = { version: 1 };
   for (const table of tables) {
     const [rows] = await connection.query(`SELECT * FROM \`${table}\` ORDER BY id`);
@@ -45,6 +45,31 @@ async function loadData(connection = pool) {
   data.configuracion = Object.fromEntries(settings.map((row) => [row.clave, row.valor]));
   const [revision] = await connection.query('SELECT revision FROM app_metadata WHERE id = 1');
   data.revision = revision[0].revision;
+  if (actor && Number(actor.rol_id) === 3) {
+    const ownLoans = data.prestamos.filter((row) => String(row.usuario_id) === String(actor.id));
+    const equipmentIds = new Set(ownLoans.map((row) => String(row.equipo_id)));
+    const ownReports = data.reportes.filter(
+      (row) => String(row.usuario_id) === String(actor.id) || equipmentIds.has(String(row.equipo_id))
+    );
+    const reportIds = new Set(ownReports.map((row) => String(row.id)));
+    const equipment = data.equipos.filter((row) => equipmentIds.has(String(row.id)));
+    const locationIds = new Set(equipment.map((row) => String(row.ubicacion_id)));
+    const siteIds = new Set(
+      data.ubicaciones
+        .filter((row) => locationIds.has(String(row.id)))
+        .map((row) => String(row.sede_id))
+    );
+    data.usuarios = data.usuarios.filter((row) => String(row.id) === String(actor.id));
+    data.prestamos = ownLoans;
+    data.equipos = equipment;
+    data.reportes = ownReports;
+    data.mantenimientos = data.mantenimientos.filter((row) => reportIds.has(String(row.reporte_id)));
+    data.actividad = data.actividad.filter((row) => String(row.usuario_id) === String(actor.id));
+    data.ubicaciones = data.ubicaciones.filter((row) => locationIds.has(String(row.id)));
+    data.sedes = data.sedes.filter((row) => siteIds.has(String(row.id)));
+    const typeIds = new Set(equipment.map((row) => String(row.tipo_id)));
+    data.tipos_equipo = data.tipos_equipo.filter((row) => typeIds.has(String(row.id)));
+  }
   return data;
 }
 

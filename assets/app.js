@@ -219,6 +219,9 @@ ${esc(value)}</textarea>
   };
   const isAdmin = () => Number(user?.rol_id) === 1;
   const isStaff = () => [1, 2].includes(Number(user?.rol_id));
+  const isStudent = () => Number(user?.rol_id) === 3;
+  const studentLoans = () => db.prestamos.filter((loan) => String(loan.usuario_id) === String(user.id));
+  const remainingDays = (date) => Math.ceil((new Date(`${date}T23:59:59`) - new Date()) / 86400000);
   function log(data, description, equipment = null) {
     data.actividad.push({
       id: store.next(data, 'actividad'),
@@ -326,6 +329,25 @@ ${esc(value)}</textarea>
     `;
   }
   function dashboard() {
+    if (isStudent()) {
+      const loans = studentLoans();
+      return html`
+        <header class="page-title-box"><div><h1 class="page-title">Mi equipo</h1><p>Consulta tus préstamos y reporta cualquier falla.</p></div></header>
+        <div class="metric-grid">
+          ${metric(loans.filter((loan) => !loan.devuelto_en).length, 'Préstamos activos', 'purple')}
+          ${metric(loans.filter((loan) => !loan.devuelto_en && remainingDays(loan.fecha_devolucion) >= 0).length, 'En plazo', 'green')}
+          ${metric(loans.filter((loan) => !loan.devuelto_en && remainingDays(loan.fecha_devolucion) < 0).length, 'Vencidos', 'red')}
+        </div>
+        <section class="surface spaced"><h2>Mis préstamos</h2>${table(
+          ['Equipo', 'Devolución', 'Tiempo restante', 'Estado', 'Acción'],
+          loans.slice().reverse().map((loan) => {
+            const days = remainingDays(loan.fecha_devolucion);
+            return [esc(eqName(loan.equipo_id)), esc(loan.fecha_devolucion), loan.devuelto_en ? 'Devuelto' : days < 0 ? `Vencido hace ${Math.abs(days)} días` : `${days} días`, loan.devuelto_en ? badge('Devuelto') : badge(days < 0 ? 'Atrasado' : 'En curso'), !loan.devuelto_en ? link('reportes', 'Reportar falla', 'create') : ''];
+          })
+        )}</section>
+        <section class="surface spaced"><h2>¿Tu equipo tiene una falla?</h2><p>Selecciona el equipo prestado y describe el problema.</p>${link('reportes', 'Reportar una falla', 'create', '', 'btn btn-primary')}</section>
+      `;
+    }
     return view('modules/dashboard/index.html#contenido', {
       contenido: isStaff()
         ? link('equipos', 'Registrar equipo', 'create', '', 'btn btn-primary')
@@ -578,7 +600,7 @@ ${esc(value)}</textarea>
               .filter(
                 (e) =>
                   ['Activo', 'En Mantenimiento'].includes(e.estado) &&
-                  !activeLoan(e.id) &&
+                  (!activeLoan(e.id) || (isStudent() && String(activeLoan(e.id)?.usuario_id) === String(user.id))) &&
                   !openReport(e.id)
               )
               .map((e) => ({ id: e.id, nombre: eqName(e.id) })),
@@ -1163,7 +1185,7 @@ ${esc(value)}</textarea>
           if (
             !e ||
             !['Activo', 'En Mantenimiento'].includes(e.estado) ||
-            activeLoan(e.id) ||
+            (activeLoan(e.id) && String(activeLoan(e.id).usuario_id) !== String(user.id)) ||
             openReport(e.id)
           )
             throw Error('El equipo no admite una nueva falla.');
