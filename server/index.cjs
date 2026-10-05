@@ -14,6 +14,7 @@ const publicError = require('./errors.cjs');
 const sessions = new Map();
 const attempts = new Map();
 const port = Number(process.env.PORT || 3000);
+const allowedOrigins = require('./origins.cjs').allowedOrigins();
 
 function send(response, status, data) {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -83,14 +84,6 @@ const server = http.createServer(async (request, response) => {
   try {
     if (url.pathname.startsWith('/api/')) {
       const origin = request.headers.origin;
-      const allowedOrigins = new Set([
-        `http://localhost:${port}`,
-        `http://localhost:${Number(process.env.LIVE_SERVER_PORT || 5500)}`,
-        'http://localhost:5501',
-        `http://127.0.0.1:${port}`,
-        `http://127.0.0.1:${Number(process.env.LIVE_SERVER_PORT || 5500)}`,
-        'http://127.0.0.1:5501'
-      ]);
       if (allowedOrigins.has(origin)) {
         response.setHeader('Access-Control-Allow-Origin', origin);
         response.setHeader('Access-Control-Allow-Credentials', 'true');

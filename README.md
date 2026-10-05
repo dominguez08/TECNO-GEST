@@ -43,6 +43,16 @@ GitHub contiene el código y el catálogo inicial, no tus contraseñas ni tu bas
 
 ## Funciones
 
+### Dominio público en Railway
+
+El servidor permite el origen HTTPS indicado por `RAILWAY_PUBLIC_DOMAIN`, que Railway
+proporciona al generar un dominio. Para un dominio personalizado, configura
+`APP_ORIGIN=https://tu-dominio.com` en las variables del servicio y vuelve a desplegar.
+Solo configura dominios propios de esta aplicación; las solicitudes de escritura
+desde otros sitios siguen bloqueadas. El servidor debe escuchar con `HOST=0.0.0.0`.
+
+Prueba de esta configuración: `node --test tests/origins.cjs`.
+
 - Acceso con correo y contraseña, creación de la primera cuenta y cierre de sesión.
 - Usuarios con roles Administrador, Técnico y Docente. Los permisos de escritura se revisan también en el servidor.
 - Panel, inventario, fotografías, registro y edición de equipos.
