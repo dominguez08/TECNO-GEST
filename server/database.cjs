@@ -29,6 +29,10 @@ const pool = mysql.createPool({
 let columns;
 
 async function loadData(connection = pool, actor = null) {
+  // Remove the old sample institution name from databases created by earlier versions.
+  await connection.query(
+    "UPDATE configuracion SET valor = 'Mi institución' WHERE clave = 'institucion' AND (valor LIKE '%San Rafael%' OR valor LIKE '%IEP%')"
+  );
   const data = { version: 1 };
   for (const table of tables) {
     const [rows] = await connection.query(`SELECT * FROM \`${table}\` ORDER BY id`);
