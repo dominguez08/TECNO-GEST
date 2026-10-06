@@ -51,6 +51,28 @@ function message(type, date = new Date()) {
   return { asunto, contenido };
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function htmlContent(job, logoUrl) {
+  const paragraphs = escapeHtml(job.contenido)
+    .split('\n')
+    .map((line) => (line ? `<p style="margin:0 0 12px">${line}</p>` : '<div style="height:4px"></div>'))
+    .join('');
+  return `<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#182b45">
+    <div style="max-width:600px;margin:24px auto;background:#fff;border:1px solid #d9e2ec;border-radius:12px;overflow:hidden">
+      <div style="padding:20px 24px;background:#052851;text-align:center"><img src="${escapeHtml(logoUrl)}" alt="InventIC" width="120" style="display:inline-block;max-width:120px;height:auto"></div>
+      <div style="padding:28px 24px"><h1 style="font-size:20px;margin:0 0 20px;color:#165da7">${escapeHtml(job.asunto)}</h1>${paragraphs}</div>
+      <div style="padding:16px 24px;background:#f8fafc;color:#52647b;font-size:12px">Aviso automático de seguridad de InventIC.</div>
+    </div></body></html>`;
+}
+
 function gmailTransport(env = process.env, fetcher = fetch) {
   const configured = Boolean(
     address(env.MAIL_FROM) &&
@@ -60,6 +82,7 @@ function gmailTransport(env = process.env, fetcher = fetch) {
   );
   let token,
     expires = 0;
+  const logoUrl = env.MAIL_LOGO_URL || 'https://inventic-production.up.railway.app/assets/logo.svg';
   async function send(job) {
     if (!configured) throw new Error('GMAIL_NOT_CONFIGURED');
     if (!address(job.destinatario)) throw new Error('INVALID_RECIPIENT');
@@ -81,19 +104,27 @@ function gmailTransport(env = process.env, fetcher = fetch) {
       token = data.access_token;
       expires = Date.now() + Math.max(0, (Number(data.expires_in) || 3600) - 60) * 1000;
     }
+    const boundary = `inventic_${job.id.replaceAll('-', '')}`;
     const mime = [
       `From: InventIC <${env.MAIL_FROM}>`,
       `To: ${job.destinatario}`,
       `Subject: =?UTF-8?B?${Buffer.from(job.asunto).toString('base64')}?=`,
       `Message-ID: <${job.id}@inventic.invalid>`,
       'MIME-Version: 1.0',
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
       'Content-Type: text/plain; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
       '',
-      Buffer.from(job.contenido)
-        .toString('base64')
-        .match(/.{1,76}/g)
-        .join('\r\n')
+      Buffer.from(job.contenido).toString('base64').match(/.{1,76}/g).join('\r\n'),
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      Buffer.from(htmlContent(job, logoUrl)).toString('base64').match(/.{1,76}/g).join('\r\n'),
+      `--${boundary}--`,
+      ''
     ].join('\r\n');
     const response = await fetcher('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',
