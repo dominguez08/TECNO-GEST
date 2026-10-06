@@ -10,6 +10,7 @@ const database = require('./database.cjs');
 const students = require('./student.cjs')(database.pool);
 const institutes = require('./institutions.cjs').service(database.pool);
 const technicians = require('./technician.cjs')(database.pool);
+const mail = require('./mail.cjs').service(database.pool);
 const { verifyPassword } = require('./security.cjs');
 const checkPermissions = require('./permissions.cjs');
 const validate = require('../assets/validation.js');
@@ -146,12 +147,14 @@ const server = http.createServer(async (request, response) => {
         }
         attempts.delete(key);
         startSession(request, response, account);
+        await mail.enqueue(account, 'login');
         return send(response, 200, { user: safeUser(account) });
       }
       if (request.method === 'POST' && url.pathname === '/api/register') {
         const id = await institutes.register(await readBody(request));
         const account = await database.getUser(id);
         startSession(request, response, account);
+        await mail.enqueue(account, 'registro');
         return send(response, 201, { user: safeUser(account) });
       }
       if (request.method === 'POST' && url.pathname === '/api/logout') {
@@ -249,6 +252,7 @@ async function start() {
   server.listen(port, process.env.HOST || '127.0.0.1', () =>
     console.log(`InventIC disponible en http://localhost:${port}`)
   );
+  mail.start();
 }
 start().catch(async (error) => {
   console.error('No se pudo actualizar InventIC: ' + error.message);

@@ -17,6 +17,6 @@
     "start": "node tools/start.cjs",
     "server": "node server/index.cjs",
     "format": "prettier --write \"assets/*.{js,css}\" \"server/*.cjs\" \"tools/*.cjs\" \"tests/*.cjs\" \"modules/**/*.html\" \"auth/*.html\" index.html",
-    "test": "node tests/origins.cjs && node tests/connection-errors.cjs && node tests/institute-migration.cjs && node tests/student-portal.cjs"
+    "test": "node tests/origins.cjs && node tests/connection-errors.cjs && node tests/mail.cjs && node tests/institute-migration.cjs && node tests/student-portal.cjs"
   }
 }

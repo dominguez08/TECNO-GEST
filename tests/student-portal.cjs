@@ -22,7 +22,7 @@ const root = path.resolve(__dirname, '..');
     password
   });
   const name = 'inventic_test_student_' + Date.now();
-  let server, browser;
+  let server, browser, mailPool;
   try {
     await install(sql, name);
     const socket = require('node:net').createServer();
@@ -41,7 +41,11 @@ const root = path.resolve(__dirname, '..');
         DB_USER: 'root',
         DB_PASS: password,
         PORT: String(port),
-        HOST: '127.0.0.1'
+        HOST: '127.0.0.1',
+        MAIL_FROM: '',
+        GMAIL_CLIENT_ID: '',
+        GMAIL_CLIENT_SECRET: '',
+        GMAIL_REFRESH_TOKEN: ''
       }
     });
     for (let i = 0; i < 80; i++) {
@@ -416,11 +420,86 @@ const root = path.resolve(__dirname, '..');
       403
     );
     assert.deepEqual(errors, []);
+    // Successful authentication queues mail; failed credentials never do.
+    const [beforeFailure] = await sql.query('SELECT COUNT(*) AS total FROM avisos_correo');
+    await api(
+      'login',
+      'POST',
+      { email: 'alice@example.test', password: 'Incorrecta123!' },
+      null,
+      401
+    );
+    const [afterFailure] = await sql.query('SELECT COUNT(*) AS total FROM avisos_correo');
+    assert.equal(afterFailure[0].total, beforeFailure[0].total);
+    const [registered] = await sql.execute(
+      "SELECT destinatario,tipo,contenido FROM avisos_correo WHERE usuario_id=? AND tipo='registro'",
+      [alice.data.user.id]
+    );
+    assert.equal(registered.length, 1);
+    assert.equal(registered[0].destinatario, 'alice@example.test');
+    assert.doesNotMatch(registered[0].contenido, /Prueba123!/);
+    mailPool = mysql.createPool({
+      host: '127.0.0.1',
+      port: 3307,
+      user: 'root',
+      password,
+      database: name,
+      connectionLimit: 3
+    });
+    const sent = [];
+    const transport = {
+      configured: true,
+      send: async (job) => {
+        sent.push(job.id);
+        return 'test-' + job.id;
+      }
+    };
+    const options = { transport, logger: { warn() {}, error() {} } };
+    const worker = require('../server/mail.cjs').service(mailPool, options);
+    const secondWorker = require('../server/mail.cjs').service(mailPool, options);
+    await Promise.all([worker.processOne(), secondWorker.processOne()]);
+    while (await worker.processOne()) {}
+    assert.equal(sent.length, beforeFailure[0].total);
+    assert.equal(new Set(sent).size, sent.length);
+    const [remaining] = await sql.query(
+      "SELECT COUNT(*) AS total FROM avisos_correo WHERE estado<>'enviado'"
+    );
+    assert.equal(remaining[0].total, 0);
+    const pendingId = await worker.enqueue(alice.data.user, 'login');
+    const failedWorker = require('../server/mail.cjs').service(mailPool, {
+      transport: {
+        configured: true,
+        send: async () => {
+          throw Error('GMAIL_SEND_429');
+        }
+      },
+      logger: { warn() {}, error() {} }
+    });
+    await failedWorker.processOne();
+    const [retry] = await sql.execute(
+      'SELECT estado,intentos,ultimo_error FROM avisos_correo WHERE id=?',
+      [pendingId]
+    );
+    assert.deepEqual(retry[0], {
+      estado: 'pendiente',
+      intentos: 1,
+      ultimo_error: 'GMAIL_SEND_429'
+    });
+    await sql.execute('UPDATE avisos_correo SET disponible_en=NOW() WHERE id=?', [pendingId]);
+    await secondWorker.processOne();
+    const [retried] = await sql.execute('SELECT estado,intentos FROM avisos_correo WHERE id=?', [
+      pendingId
+    ]);
+    assert.deepEqual(retried[0], { estado: 'enviado', intentos: 2 });
+    console.log(
+      'Email queue: successful auth only, isolated recipient, durable jobs, concurrent workers and retries passed.'
+    );
     console.log(
       'Institutes: registration by role, approval, isolation, provisional IDs, student countdown/reports and technician repair workflow passed.'
     );
   } finally {
     await browser?.close();
+    await mailPool?.end();
     if (server) {
       const exited = new Promise((resolve) => server.once('exit', resolve));
       server.kill();

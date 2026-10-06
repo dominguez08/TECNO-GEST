@@ -35,7 +35,11 @@ async function migrate(connection) {
     const [version] = await connection.query(
       'SELECT schema_version FROM app_metadata WHERE id = 1'
     );
-    if (version[0].schema_version >= 1) return;
+    if (version[0].schema_version >= 2) return;
+    if (version[0].schema_version === 1) {
+      await require('./mail.cjs').migrate(connection);
+      return;
+    }
     await connection.query(`CREATE TABLE IF NOT EXISTS institutos (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
       nombre VARCHAR(100) NOT NULL,
@@ -93,6 +97,7 @@ async function migrate(connection) {
       "UPDATE institutos i JOIN configuracion c ON c.instituto_id = i.id AND c.clave = 'institucion' SET i.nombre = LEFT(c.valor,100)"
     );
     await connection.query('UPDATE app_metadata SET schema_version = 1 WHERE id = 1');
+    await require('./mail.cjs').migrate(connection);
   } finally {
     await connection.query("SELECT RELEASE_LOCK(CONCAT(DATABASE(), ':institutes'))");
   }
