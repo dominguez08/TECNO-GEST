@@ -8,6 +8,8 @@ if (fs.existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, 
 
 const database = require('./database.cjs');
 const students = require('./student.cjs')(database.pool);
+const institutes = require('./institutions.cjs').service(database.pool);
+const technicians = require('./technician.cjs')(database.pool);
 const { verifyPassword } = require('./security.cjs');
 const checkPermissions = require('./permissions.cjs');
 const validate = require('../assets/validation.js');
@@ -111,14 +113,14 @@ const server = http.createServer(async (request, response) => {
       if (request.method === 'GET' && url.pathname === '/api/session') {
         return send(response, 200, {
           user: safeUser(user),
-          setup: await database.needsSetup(),
-          settings: { nombre: 'InventIC', institucion: 'Mi institución', moneda: 'USD' }
+          setup: false,
+          settings: { nombre: 'InventIC', institucion: 'Plataforma para institutos', moneda: 'USD' }
         });
       }
       if (request.method === 'POST' && url.pathname === '/api/setup') {
-        const admin = await database.setupAdmin(await readBody(request));
-        startSession(request, response, admin);
-        return send(response, 201, { user: safeUser(admin) });
+        return send(response, 410, {
+          error: 'Actualiza la página y usa Crear cuenta para registrar tu instituto.'
+        });
       }
       if (request.method === 'POST' && url.pathname === '/api/login') {
         const key = request.socket.remoteAddress;
@@ -147,7 +149,7 @@ const server = http.createServer(async (request, response) => {
         return send(response, 200, { user: safeUser(account) });
       }
       if (request.method === 'POST' && url.pathname === '/api/register') {
-        const id = await students.register(await readBody(request));
+        const id = await institutes.register(await readBody(request));
         const account = await database.getUser(id);
         startSession(request, response, account);
         return send(response, 201, { user: safeUser(account) });
@@ -161,6 +163,22 @@ const server = http.createServer(async (request, response) => {
         return send(response, 200, { ok: true });
       }
       if (!user) return send(response, 401, { error: 'Inicia sesión para continuar.' });
+      if (!Number(user.aprobado)) {
+        if (request.method === 'GET' && url.pathname === '/api/data')
+          return send(response, 200, await institutes.pending(user));
+        return send(response, 403, {
+          error: 'El director debe aprobar tu cuenta para acceder al instituto.'
+        });
+      }
+      if (Number(user.rol_id) === 2) {
+        if (request.method === 'GET' && url.pathname === '/api/data')
+          return send(response, 200, await technicians.data(user));
+        if (request.method === 'POST' && url.pathname === '/api/technician/repairs')
+          return send(response, 200, await technicians.repair(user, await readBody(request)));
+        return send(response, 403, {
+          error: 'Tu cuenta solo puede consultar fallas y gestionar reparaciones.'
+        });
+      }
       if (Number(user.rol_id) === 3) {
         if (request.method === 'GET' && url.pathname === '/api/data')
           return send(response, 200, await students.data(user));
@@ -171,7 +189,9 @@ const server = http.createServer(async (request, response) => {
         });
       }
       if (request.method === 'GET' && url.pathname === '/api/data')
-        return send(response, 200, await database.loadData());
+        return send(response, 200, await database.loadData(user));
+      if (request.method === 'POST' && url.pathname === '/api/institute/approval')
+        return send(response, 200, await institutes.approve(user, await readBody(request)));
       if (request.method === 'PUT' && url.pathname === '/api/data') {
         const body = await readBody(request);
         const data = await database.saveData(
@@ -219,9 +239,22 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(port, process.env.HOST || '127.0.0.1', () =>
-  console.log(`InventIC disponible en http://localhost:${port}`)
-);
+async function start() {
+  const connection = await database.pool.getConnection();
+  try {
+    await require('./institutions.cjs').migrate(connection);
+  } finally {
+    connection.release();
+  }
+  server.listen(port, process.env.HOST || '127.0.0.1', () =>
+    console.log(`InventIC disponible en http://localhost:${port}`)
+  );
+}
+start().catch(async (error) => {
+  console.error('No se pudo actualizar InventIC: ' + error.message);
+  await database.pool.end();
+  process.exitCode = 1;
+});
 setInterval(() => {
   for (const [id, session] of sessions) if (session.expires < Date.now()) sessions.delete(id);
   for (const [id, limit] of attempts) if (limit.until < Date.now()) attempts.delete(id);

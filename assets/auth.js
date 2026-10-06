@@ -20,6 +20,11 @@ window.InventicAuth = (() => {
   async function signOut() {
     await request('logout', {});
     session.user = null;
+    window.InventicStore.setSettings({
+      nombre: 'InventIC',
+      institucion: 'Plataforma para institutos',
+      moneda: 'USD'
+    });
   }
 
   function currentUser(data) {

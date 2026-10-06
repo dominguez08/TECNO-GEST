@@ -24,6 +24,7 @@ async function install(connection, databaseName, existingEmpty = false) {
   await connection.query(
     "INSERT INTO configuracion (clave, valor) VALUES ('nombre', 'InventIC'), ('institucion', 'Mi institución'), ('moneda', 'USD')"
   );
+  await require('../server/institutions.cjs').migrate(connection);
 }
 
 async function main() {

@@ -22,6 +22,8 @@
     )
       throw Error('El respaldo no tiene el formato de InventIC.');
     if (!data.configuracion.institucion.trim()) throw Error('Escribe el nombre de la institución.');
+    if (data.configuracion.institucion.length > 100)
+      throw Error('El nombre del instituto admite hasta 100 caracteres.');
     if (!['USD', 'EUR'].includes(data.configuracion.moneda))
       throw Error('Selecciona una moneda válida.');
     for (const table of tables) {

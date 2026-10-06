@@ -32,6 +32,21 @@ async function start() {
     await waitForMysql(databasePort);
   }
 
+  const adminFile = path.join(root, '.runtime/mysql-admin.json');
+  if (['127.0.0.1', 'localhost'].includes(databaseHost) && fs.existsSync(adminFile)) {
+    const connection = await require('mysql2/promise').createConnection({
+      host: databaseHost,
+      port: databasePort,
+      user: 'root',
+      password: JSON.parse(fs.readFileSync(adminFile, 'utf8')).password,
+      database: process.env.DB_NAME
+    });
+    try {
+      await require('../server/institutions.cjs').migrate(connection);
+    } finally {
+      await connection.end();
+    }
+  }
   if (process.argv.includes('--database-only')) return;
   if (await portOpen(appPort)) {
     const response = await fetch(`http://127.0.0.1:${appPort}/api/session`, {

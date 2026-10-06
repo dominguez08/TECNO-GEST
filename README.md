@@ -1,33 +1,33 @@
 # InventIC
 
-InventIC es una aplicación web para administrar inventarios, préstamos, reportes de fallas y mantenimientos. Usa Node.js para el servidor y MySQL para almacenar la información.
+InventIC administra inventarios, préstamos, fallas y reparaciones de varios institutos. Cada instituto tiene sus propios usuarios y datos. La aplicación usa Node.js y MySQL.
 
 ## Uso local en Windows
 
-Requisitos: Node.js 22 o superior y MySQL 8. También puedes usar el MySQL incluido en WAMP.
+Requisitos: Node.js 22 o superior y MySQL 8. También puedes usar MySQL incluido en WAMP.
 
 1. Descarga el proyecto y extrae la carpeta completa.
 2. Ejecuta `Iniciar InventIC.cmd` o abre una terminal en la carpeta y ejecuta `npm start`.
-3. Abre la dirección que muestre la terminal, normalmente `http://localhost:3000`.
-4. En una instalación nueva, crea la primera cuenta administradora.
-5. Entra a Configuración para definir el nombre de la institución, moneda, sedes, tipos de equipo y usuarios.
+3. Abre la dirección indicada, normalmente `http://localhost:3000`.
+4. Pulsa **Crear cuenta**, elige **Administrador / director** y escribe el nombre de tu instituto.
+5. Configura tus sedes, categorías de equipo y usuarios desde el panel.
 
-La primera instalación crea una base MySQL vacía y genera las credenciales en `.env`. Las siguientes ejecuciones conservan los datos existentes. No borres `.env`, `.runtime/` ni `mysql-data/` si necesitas conservar la información.
+La primera instalación crea una base MySQL y genera las credenciales en `.env`. Las siguientes ejecuciones conservan los datos. No borres `.env`, `.runtime/` ni `mysql-data/` si necesitas conservar la información.
 
-No abras `index.html` directamente. La aplicación necesita el servidor Node.js y la conexión MySQL.
+No abras `index.html` directamente: la aplicación necesita el servidor Node.js y MySQL.
 
 ## Uso con Docker
 
 1. Instala y abre Docker Desktop con contenedores Linux.
 2. Ejecuta `Iniciar con Docker.cmd`.
-3. Abre `http://localhost:3000` y crea la primera cuenta.
+3. Abre `http://localhost:3000` y registra la cuenta del director y su instituto.
 
 Para detenerlo, ejecuta `docker compose --env-file .docker.env down`. El volumen de MySQL conserva los datos.
 
 ## Despliegue en Railway
 
-1. Crea un servicio MySQL en el mismo proyecto de Railway.
-2. En el servicio de la aplicación configura estas variables:
+1. Crea un servicio MySQL en el mismo proyecto.
+2. En el servicio de la aplicación configura:
 
 ```dotenv
 DB_HOST=${{MySQL.MYSQLHOST}}
@@ -38,63 +38,73 @@ DB_NAME=${{MySQL.MYSQLDATABASE}}
 HOST=0.0.0.0
 ```
 
-3. En Networking genera un dominio público para el puerto que Railway indique a la aplicación.
-4. Abre el dominio y crea la primera cuenta.
+3. En Networking genera un dominio público para el puerto indicado por Railway.
+4. Abre el dominio y registra tu instituto desde **Crear cuenta**.
 
-`RAILWAY_PUBLIC_DOMAIN` se acepta automáticamente como origen de los formularios. Para un dominio propio, añade también `APP_ORIGIN=https://tu-dominio.com`.
+`RAILWAY_PUBLIC_DOMAIN` se acepta automáticamente como origen de los formularios. Para un dominio propio, añade `APP_ORIGIN=https://tu-dominio.com`.
 
-## Funciones
+## Registrar un instituto y sus integrantes
 
-- Inicio de sesión, creación de la primera cuenta administradora y registro de estudiantes.
-- Roles Administrador, Técnico y Estudiante.
-- Portal de estudiante para consultar el tiempo restante de sus préstamos y reportar fallas de los equipos que tiene asignados.
-- Inventario de equipos, ubicaciones y sedes.
-- Préstamos y devoluciones.
-- Reportes de fallas y mantenimientos.
-- Configuración de la institución, usuarios y apariencia.
-- Exportación y restauración de respaldos JSON sin contraseñas.
+La pantalla de acceso contiene **Iniciar sesión** y **Crear cuenta**. Cada correo corresponde a una cuenta y un instituto.
 
-## Cuentas y préstamos de estudiantes
+1. El director elige **Administrador / director**, completa sus datos y el nombre del instituto. Se crea un espacio vacío, sin sedes ni equipos de ejemplo.
+2. En **Configuración → Mi instituto**, consulta el código del instituto y lo comparte con sus estudiantes y técnicos. También puede editar el nombre del instituto.
+3. Cada integrante elige **Estudiante** o **Técnico**, introduce el código y crea su cuenta. Queda pendiente de aprobación.
+4. El director entra en **Usuarios** para aprobar el acceso, editar los datos y roles, crear cuentas o suspenderlas. Solo ve a los integrantes de su instituto.
+5. Una vez aprobado, el integrante pulsa **Actualizar** o vuelve a iniciar sesión.
 
-La pantalla de acceso contiene **Iniciar sesión** y **Crear cuenta**. En una instalación vacía, la primera cuenta es administradora. Después, las cuentas creadas desde esta pantalla son de estudiantes; los administradores gestionan los demás roles desde Configuración.
+Registrarse como director crea un instituto nuevo; no concede acceso a otro existente. Para incorporar otro administrador al mismo instituto, su director debe crear o cambiar el rol de esa cuenta desde **Usuarios**. Si el director ya creó tu cuenta, utiliza las credenciales que te haya asignado en **Iniciar sesión**.
 
-1. El estudiante crea su cuenta con nombre, correo y contraseña. Si el administrador ya creó esa cuenta, debe iniciar sesión con las credenciales asignadas.
-2. El administrador registra el préstamo y selecciona la cuenta del estudiante como destinatario.
-3. El estudiante inicia sesión y accede a **Mis préstamos**, donde solo aparecen sus equipos asignados, fechas, tiempo restante, devoluciones y reportes propios. El plazo termina a las 23:59 de la fecha de devolución, hora de El Salvador.
-4. Para informar una falla, selecciona un equipo prestado, describe el problema y pulsa **Enviar falla**. Solo puede existir una falla abierta por equipo.
-5. El administrador consulta el reporte pendiente. Al registrar la devolución, el equipo con una falla abierta pasa a mantenimiento; entonces puede asignar su reparación.
+## Préstamos, fallas y reparaciones
 
-El botón **Actualizar** consulta los últimos cambios. El contador de tiempo se actualiza automáticamente. Las cuentas de estudiantes no pueden consultar el inventario general ni modificar los datos administrativos.
+| Rol                      | Funciones                                                                                                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Administrador / director | Gestiona usuarios, sedes, equipos, préstamos, devoluciones, fallas y configuración de su instituto.                                                              |
+| Técnico                  | Consulta las fallas de su instituto y registra diagnósticos y reparaciones. No accede al inventario general, a los préstamos ni a la administración de usuarios. |
+| Estudiante               | Consulta únicamente sus préstamos, el tiempo restante y sus reportes de fallas.                                                                                  |
 
-## Almacenamiento
+1. El director registra las sedes, ubicaciones y equipos, y asigna el préstamo a un estudiante aprobado.
+2. El estudiante abre **Mis préstamos** para consultar sus equipos y el tiempo restante. El plazo termina a las 23:59 de la fecha de devolución, hora de El Salvador; el contador se actualiza automáticamente.
+3. Para reportar una falla, selecciona su equipo, describe el problema y pulsa **Enviar falla**. Solo puede existir una falla abierta por equipo.
+4. El director consulta la falla y registra la devolución. El equipo con una falla abierta pasa a mantenimiento.
+5. El técnico abre **Fallas y reparaciones**. Puede atender una falla sin asignar o una que el director le haya asignado. Al guardar una falla sin asignar, queda a su cargo.
+6. El técnico registra el diagnóstico y cambia el estado a **En revisión**, **En reparación** o **Reparado**. Para finalizar debe indicar una solución; el equipo vuelve a estar disponible.
 
-Los datos de inventario, usuarios, configuración, préstamos, reportes y mantenimientos se guardan mediante la API en MySQL. El navegador no usa `localStorage` para guardar datos de trabajo. Las contraseñas se almacenan con scrypt y las sesiones usan una cookie HttpOnly.
+El botón **Actualizar** consulta los cambios recientes. Los reportes finalizados y las reparaciones asignadas a otros técnicos se muestran como consulta.
 
-Cada instalación nueva comienza con una base vacía y su propia cuenta administradora. No se cargan equipos, sedes ni registros de otra instalación.
+## Almacenamiento y respaldos
+
+Los usuarios, inventarios, préstamos, fallas, reparaciones y configuraciones se guardan en MySQL. El navegador no usa `localStorage` para guardar datos de trabajo. Las contraseñas se almacenan con scrypt y las sesiones usan una cookie HttpOnly.
+
+Cada instituto nuevo comienza vacío. Las consultas y modificaciones se limitan al instituto de la cuenta autenticada. Desde **Configuración → Respaldos**, el director puede exportar sus datos a JSON, sin contraseñas, y restaurar un respaldo del mismo instituto. Las cuentas recuperadas sin contraseña necesitan que el director les asigne una.
+
+Al iniciar una base de una versión anterior, la migración conserva sus cuentas y registros en el instituto existente. Su director puede cambiar el nombre y consultar el código desde Configuración. Las etiquetas antiguas de la sede de ejemplo se sustituyen por una etiqueta neutra sin eliminar los equipos asociados. El usuario MySQL que ejecute la migración necesita permisos para crear y alterar tablas; el iniciador local usa las credenciales privadas de instalación cuando están disponibles.
 
 ## Estructura principal
 
-| Ruta                     | Función                                 |
-| ------------------------ | --------------------------------------- |
-| `assets/app.js`          | Navegación, pantallas y formularios     |
-| `assets/api.js`          | Comunicación con el servidor            |
-| `assets/store.js`        | Lectura y escritura mediante la API     |
-| `assets/validation.js`   | Validaciones del cliente y del servidor |
-| `server/index.cjs`       | Servidor HTTP y rutas de la API         |
-| `server/database.cjs`    | Consultas y transacciones MySQL         |
-| `server/permissions.cjs` | Permisos por rol                        |
-| `database.sql`           | Esquema de la base de datos             |
-| `tools/start.cjs`        | Inicio local                            |
-| `compose.yaml`           | Servicios Docker                        |
+| Ruta                      | Función                                           |
+| ------------------------- | ------------------------------------------------- |
+| `assets/app.js`           | Navegación, pantallas y formularios               |
+| `assets/api.js`           | Comunicación con el servidor                      |
+| `assets/store.js`         | Lectura y escritura mediante la API               |
+| `assets/validation.js`    | Validaciones del cliente y del servidor           |
+| `server/index.cjs`        | Servidor HTTP y rutas de la API                   |
+| `server/database.cjs`     | Consultas y transacciones del administrador       |
+| `server/institutions.cjs` | Registro, aprobación y migración de institutos    |
+| `server/student.cjs`      | Préstamos y reportes propios del estudiante       |
+| `server/technician.cjs`   | Consulta de fallas y reparaciones del técnico     |
+| `server/permissions.cjs`  | Permisos de modificaciones administrativas        |
+| `database.sql`            | Esquema base; el iniciador aplica las migraciones |
+| `tools/start.cjs`         | Inicio local                                      |
+| `compose.yaml`            | Servicios Docker                                  |
 
 ## Pruebas y formato
 
 ```bash
 npm test
-node tests/student-portal.cjs
 npm run format
 ```
 
-La prueba del portal necesita MySQL local en el puerto 3307, las credenciales de `.runtime/mysql-admin.json` (o la ruta indicada en `TEST_MYSQL_ADMIN_FILE`) y Microsoft Edge. Crea y elimina una base de prueba independiente.
+Las pruebas necesitan MySQL local en el puerto 3307, las credenciales de `.runtime/mysql-admin.json` (o la ruta indicada en `TEST_MYSQL_ADMIN_FILE`) y Microsoft Edge. Crean y eliminan bases de prueba independientes. Comprueban la migración, el aislamiento entre institutos, los permisos de cada rol y los flujos de registro, préstamos y reparación en el navegador.
 
 No publiques `.env`, `.runtime/`, `mysql-data/` ni respaldos privados.

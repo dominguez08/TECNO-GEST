@@ -28,27 +28,49 @@ const pool = mysql.createPool({
 
 let columns;
 
-async function loadData(connection = pool) {
-  // Remove the old sample institution name from databases created by earlier versions.
-  await connection.query(
-    "UPDATE configuracion SET valor = 'Mi institución' WHERE clave = 'institucion' AND TRIM(valor) = 'IEP San Rafael'"
-  );
+async function loadData(actor, connection = pool) {
+  if (!actor?.instituto_id) throw new Error('La cuenta no tiene instituto.');
+  if (connection === pool) {
+    const snapshot = await pool.getConnection();
+    try {
+      await snapshot.beginTransaction();
+      const result = await loadData(actor, snapshot);
+      await snapshot.commit();
+      return result;
+    } catch (error) {
+      await snapshot.rollback();
+      throw error;
+    } finally {
+      snapshot.release();
+    }
+  }
   const data = { version: 1 };
   for (const table of tables) {
-    const [rows] = await connection.query(`SELECT * FROM \`${table}\` ORDER BY id`);
+    const [rows] = await connection.execute(
+      `SELECT * FROM \`${table}\` WHERE instituto_id = ? ORDER BY id`,
+      [actor.instituto_id]
+    );
     data[table] = rows.map((row) => {
       if (table === 'usuarios') {
         row.hasPassword = Boolean(row.password);
         delete row.password;
       }
       delete row.activo_equipo;
+      delete row.instituto_id;
       return row;
     });
   }
-  const [settings] = await connection.query('SELECT clave, valor FROM configuracion');
+  const [settings] = await connection.execute(
+    'SELECT clave, valor FROM configuracion WHERE instituto_id = ?',
+    [actor.instituto_id]
+  );
   data.configuracion = Object.fromEntries(settings.map((row) => [row.clave, row.valor]));
-  const [revision] = await connection.query('SELECT revision FROM app_metadata WHERE id = 1');
+  const [revision] = await connection.execute(
+    'SELECT id,nombre,codigo,revision FROM institutos WHERE id = ?',
+    [actor.instituto_id]
+  );
   data.revision = revision[0].revision;
+  data.instituto = { id: revision[0].id, nombre: revision[0].nombre, codigo: revision[0].codigo };
   return data;
 }
 
@@ -62,54 +84,8 @@ async function getUserByEmail(email) {
   return rows[0];
 }
 
-async function needsSetup() {
-  const [rows] = await pool.query(
-    "SELECT COUNT(*) AS total FROM usuarios WHERE rol_id = 1 AND password <> ''"
-  );
-  return rows[0].total === 0;
-}
-
-async function setupAdmin({ nombre, email, password, confirmation }) {
-  if (!nombre?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '')) {
-    throw new Error('Escribe tu nombre y un correo válido.');
-  }
-  if (password !== confirmation) throw new Error('Las contraseñas no coinciden.');
-  const hash = await hashPassword(password);
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    await connection.query('SELECT id FROM app_metadata WHERE id = 1 FOR UPDATE');
-    const [admins] = await connection.query(
-      'SELECT id, password FROM usuarios WHERE rol_id = 1 ORDER BY id'
-    );
-    if (admins.some((admin) => admin.password))
-      throw new Error('La cuenta administradora ya está configurada.');
-    let id = admins[0]?.id;
-    if (id) {
-      await connection.execute(
-        'UPDATE usuarios SET nombre = ?, email = ?, password = ? WHERE id = ?',
-        [nombre.trim(), email.trim().toLowerCase(), hash, id]
-      );
-    } else {
-      const [result] = await connection.execute(
-        'INSERT INTO usuarios (nombre, email, password, rol_id) VALUES (?, ?, ?, 1)',
-        [nombre.trim(), email.trim().toLowerCase(), hash]
-      );
-      id = result.insertId;
-    }
-    await connection.query('UPDATE app_metadata SET revision = revision + 1 WHERE id = 1');
-    await connection.commit();
-    return getUser(id);
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
-}
-
 async function saveData(data, validate, checkPermission, actor, restoring = false) {
-  if (![1, 2].includes(Number(actor.rol_id))) {
+  if (Number(actor.rol_id) !== 1 || !Number(actor.aprobado)) {
     throw Object.assign(new Error('No tienes permiso para modificar el inventario.'), {
       status: 403
     });
@@ -117,8 +93,11 @@ async function saveData(data, validate, checkPermission, actor, restoring = fals
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const [metadata] = await connection.query(
-      'SELECT revision FROM app_metadata WHERE id = 1 FOR UPDATE'
+    await connection.query('SELECT id FROM app_metadata WHERE id = 1 FOR UPDATE');
+    await require('./institutions.cjs').authorize(connection, actor, 1);
+    const [metadata] = await connection.execute(
+      'SELECT revision FROM institutos WHERE id = ? FOR UPDATE',
+      [actor.instituto_id]
     );
     if (Number(data.revision) !== metadata[0].revision) {
       const error = new Error(
@@ -127,9 +106,50 @@ async function saveData(data, validate, checkPermission, actor, restoring = fals
       error.status = 409;
       throw error;
     }
-    const previous = await loadData(connection);
+    const previous = await loadData(actor, connection);
     await checkPermission(previous, data, actor, restoring);
     validate(data);
+    if (restoring && Number(data.instituto?.id) !== Number(actor.instituto_id))
+      throw new Error('Solo puedes restaurar un respaldo de tu propio instituto.');
+    const self = data.usuarios.find((u) => Number(u.id) === Number(actor.id));
+    if (Number(self?.rol_id) !== 1 || Number(self?.aprobado) !== 1)
+      throw new Error('Debes conservar tu cuenta administradora activa.');
+    for (const loan of data.prestamos) {
+      if (!previous.prestamos.some((old) => Number(old.id) === Number(loan.id))) {
+        const student = data.usuarios.find((u) => Number(u.id) === Number(loan.usuario_id));
+        if (Number(student?.rol_id) !== 3 || Number(student?.aprobado) === 0)
+          throw new Error('Selecciona un estudiante aprobado para el préstamo.');
+      }
+    }
+    // Browser IDs are provisional. Allocate globally unique IDs and remap only new rows.
+    const maps = {};
+    for (const table of tables) {
+      maps[table] = new Map();
+      const [maximum] = await connection.query(
+        `SELECT COALESCE(MAX(id),0) AS id FROM \`${table}\``
+      );
+      let next = Number(maximum[0].id);
+      for (const row of data[table]) {
+        if (!previous[table].some((old) => Number(old.id) === Number(row.id))) {
+          maps[table].set(String(row.id), ++next);
+          row.id = next;
+        }
+      }
+    }
+    const relations = {
+      usuarios: { sede_id: 'sedes' },
+      ubicaciones: { sede_id: 'sedes' },
+      equipos: { tipo_id: 'tipos_equipo', ubicacion_id: 'ubicaciones', responsable_id: 'usuarios' },
+      reportes: { equipo_id: 'equipos', usuario_id: 'usuarios' },
+      prestamos: { equipo_id: 'equipos', usuario_id: 'usuarios', registrado_por: 'usuarios' },
+      mantenimientos: { reporte_id: 'reportes', tecnico_id: 'usuarios' },
+      actividad: { equipo_id: 'equipos', usuario_id: 'usuarios' }
+    };
+    for (const [table, fields] of Object.entries(relations))
+      for (const row of data[table])
+        for (const [field, target] of Object.entries(fields))
+          if (maps[target].has(String(row[field])))
+            row[field] = maps[target].get(String(row[field]));
 
     if (!columns) {
       columns = {};
@@ -139,13 +159,18 @@ async function saveData(data, validate, checkPermission, actor, restoring = fals
       }
     }
 
-    const [passwordRows] = await connection.query('SELECT id, password FROM usuarios');
+    const [passwordRows] = await connection.execute(
+      'SELECT id, password FROM usuarios WHERE instituto_id = ?',
+      [actor.instituto_id]
+    );
     const passwords = new Map(passwordRows.map((row) => [String(row.id), row.password]));
 
     for (const table of tables) {
       for (const record of data[table]) {
-        const row = { ...record };
+        const row = { ...record, instituto_id: actor.instituto_id };
         if (table === 'usuarios') {
+          if (row.aprobado === undefined) row.aprobado = 1;
+          if (![0, 1].includes(Number(row.aprobado))) throw new Error('Estado de cuenta inválido.');
           row.password = passwords.get(String(row.id)) || '';
           if (row.new_password) {
             if (row.new_password !== row.confirmation)
@@ -187,8 +212,8 @@ async function saveData(data, validate, checkPermission, actor, restoring = fals
             .filter((item) => item.column.Field !== 'id')
             .map((item) => item.value);
           await connection.execute(
-            `UPDATE \`${table}\` SET ${updatedFields.map((column) => `\`${column.Field}\` = ?`).join(',')} WHERE id = ?`,
-            [...updatedValues, row.id]
+            `UPDATE \`${table}\` SET ${updatedFields.map((column) => `\`${column.Field}\` = ?`).join(',')} WHERE id = ? AND instituto_id = ?`,
+            [...updatedValues, row.id, actor.instituto_id]
           );
         } else {
           await connection.execute(
@@ -203,18 +228,26 @@ async function saveData(data, validate, checkPermission, actor, restoring = fals
         (old) => !data[table].some((row) => String(row.id) === String(old.id))
       );
       for (const row of removed)
-        await connection.execute(`DELETE FROM \`${table}\` WHERE id = ?`, [row.id]);
+        await connection.execute(`DELETE FROM \`${table}\` WHERE id = ? AND instituto_id = ?`, [
+          row.id,
+          actor.instituto_id
+        ]);
     }
-    await connection.query('DELETE FROM configuracion');
+    await connection.execute('DELETE FROM configuracion WHERE instituto_id = ?', [
+      actor.instituto_id
+    ]);
     for (const [key, value] of Object.entries(data.configuracion)) {
-      await connection.execute('INSERT INTO configuracion (clave, valor) VALUES (?, ?)', [
-        key,
-        String(value)
-      ]);
+      await connection.execute(
+        'INSERT INTO configuracion (clave, valor, instituto_id) VALUES (?, ?, ?)',
+        [key, String(value), actor.instituto_id]
+      );
     }
-    await connection.query('UPDATE app_metadata SET revision = revision + 1 WHERE id = 1');
+    await connection.execute(
+      'UPDATE institutos SET revision = revision + 1, nombre = ? WHERE id = ?',
+      [data.configuracion.institucion, actor.instituto_id]
+    );
     await connection.commit();
-    return loadData();
+    return loadData(actor);
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -223,4 +256,4 @@ async function saveData(data, validate, checkPermission, actor, restoring = fals
   }
 }
 
-module.exports = { pool, loadData, getUser, getUserByEmail, needsSetup, setupAdmin, saveData };
+module.exports = { pool, loadData, getUser, getUserByEmail, saveData };

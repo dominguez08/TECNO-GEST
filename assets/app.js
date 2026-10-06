@@ -15,6 +15,7 @@
     ['ubicaciones', 'Ubicaciones', '⌖'],
     ['estadisticas', 'Reportes', '▥'],
     ['reportes', 'Reportes de fallas', '!'],
+    ['usuarios', 'Usuarios', '♙'],
     ['configuracion', 'Configuración', '⚙']
   ];
   let db, user, route, action, params;
@@ -479,7 +480,10 @@ ${esc(value)}</textarea>
           db.equipos.filter(available).map((e) => ({ id: e.id, nombre: eqName(e.id) })),
           ''
         ),
-        opciones_usuario_id: selectOptions(db.usuarios, ''),
+        opciones_usuario_id: selectOptions(
+          db.usuarios.filter((u) => Number(u.rol_id) === 3 && Number(u.aprobado) === 1),
+          ''
+        ),
         fecha_prestamo: esc(today()),
         fecha_devolucion: esc(today()),
         cancelar: link(route, 'Cancelar')
@@ -618,7 +622,9 @@ ${esc(value)}</textarea>
                       select(
                         'tecnico_id',
                         'Técnico responsable',
-                        db.usuarios.filter((u) => Number(u.rol_id) !== 3),
+                        db.usuarios.filter(
+                          (u) => Number(u.rol_id) !== 3 && Number(u.aprobado) === 1
+                        ),
                         m.tecnico_id || user.id,
                         true
                       ) +
@@ -718,14 +724,15 @@ ${esc(value)}</textarea>
     return view('modules/usuarios/index.html#contenido', {
       link: link('usuarios', 'Nuevo usuario', 'create', '', 'btn btn-primary'),
       table: table(
-        ['Nombre', 'Correo', 'Rol', 'Acciones'],
+        ['Nombre', 'Correo', 'Rol', 'Acceso', 'Acciones'],
         db.usuarios.map((u) => [
           esc(u.nombre),
           esc(u.email),
           esc(roles[u.rol_id - 1]),
+          Number(u.aprobado) ? 'Aprobado' : 'Pendiente / suspendido',
           html`
             <div class="table-action">
-              ${link('usuarios', 'Editar', 'edit', u.id)}${String(u.id) !== String(user.id) ? button('Eliminar', 'delete-usuario', u.id) : ''}
+              ${link('usuarios', 'Editar', 'edit', u.id)}${String(u.id) !== String(user.id) ? button(Number(u.aprobado) ? 'Suspender acceso' : 'Aprobar acceso', Number(u.aprobado) ? 'suspend-user' : 'approve-user', u.id) + button('Eliminar', 'delete-usuario', u.id) : ''}
             </div>
           `
         ])
@@ -735,7 +742,7 @@ ${esc(value)}</textarea>
   function settingsPage() {
     const tab = params.get('tab') || 'general';
     const tabs = [
-      ['general', 'Apariencia'],
+      ['general', 'Mi instituto'],
       ['usuarios', 'Usuarios y roles'],
       ['categorias', 'Categorías'],
       ['sedes', 'Sedes'],
@@ -759,15 +766,28 @@ ${esc(value)}</textarea>
     let content = '';
 
     if (tab === 'general') {
-      content = view('modules/configuracion/index.html#apariencia', {
-        details: details([
-          ['Usuarios', db.usuarios.length],
-          ['Equipos', db.equipos.length],
-          ['Sedes', db.sedes.length],
-          ['Categorías', db.tipos_equipo.length]
-        ]),
-        link: link('perfil', 'Editar mi perfil')
-      });
+      content =
+        html`
+          <section class="surface spaced">
+            <h2>Mi instituto</h2>
+            <p>Comparte este código con tus estudiantes y técnicos para que soliciten acceso:</p>
+            <p><strong id="institute-code">${esc(db.instituto.codigo)}</strong></p>
+            <p>
+              Aprueba las solicitudes en Usuarios. Cada administrador que se registra crea un
+              instituto independiente.
+            </p>
+            ${form('configuracion', field('institucion', 'Nombre del instituto', db.configuracion.institucion, 'text', true, 'maxlength="100"'), 'configuracion')}
+          </section>
+        ` +
+        view('modules/configuracion/index.html#apariencia', {
+          details: details([
+            ['Usuarios', db.usuarios.length],
+            ['Equipos', db.equipos.length],
+            ['Sedes', db.sedes.length],
+            ['Categorías', db.tipos_equipo.length]
+          ]),
+          link: link('perfil', 'Editar mi perfil')
+        });
     } else if (tab === 'usuarios') {
       content = view('modules/configuracion/index.html#usuarios', {
         link: link('usuarios', 'Administrar usuarios', 'index', '', 'btn btn-primary'),
@@ -777,7 +797,7 @@ ${esc(value)}</textarea>
             ['Administrador', 'Configuración, usuarios y gestión completa del inventario.'],
             [
               'Técnico',
-              'Equipos, préstamos, ubicaciones y mantenimiento. Sin eliminación ni configuración.'
+              'Consulta fallas de su instituto y atiende reparaciones. Sin acceso a usuarios, préstamos ni inventario general.'
             ],
             ['Estudiante', 'Consulta sus préstamos y reporta fallas de los equipos prestados.']
           ]
@@ -867,6 +887,16 @@ ${esc(value)}</textarea>
       }
       if (route === 'logout') {
         auth.signOut().then(() => go('login'));
+        return;
+      }
+      if (db.scope === 'pending') {
+        renderPending();
+        window.dispatchEvent(new Event('inventic:render'));
+        return;
+      }
+      if (db.scope === 'technician') {
+        renderTechnician();
+        window.dispatchEvent(new Event('inventic:render'));
         return;
       }
       if (isStudent()) {
@@ -1015,6 +1045,95 @@ ${esc(value)}</textarea>
     return fields;
   }
 
+  function portalHeader(heading, description) {
+    return (
+      title(
+        heading,
+        description,
+        button('Actualizar', 'student-refresh') + button('Cerrar sesión', 'logout')
+      ) + '<div id="message" aria-live="polite"></div>'
+    );
+  }
+  function renderPending() {
+    document.title = 'Acceso pendiente · InventIC';
+    document.getElementById('app').innerHTML = html`
+      <main class="p-content" id="main-content">
+        ${portalHeader('Acceso pendiente', db.configuracion.institucion)}
+        <section class="surface">
+          <h2>Hola, ${esc(user.nombre)}</h2>
+          <p>
+            Tu cuenta de ${esc(roles[user.rol_id - 1].toLowerCase())} está registrada. El director
+            debe aprobar tu acceso al instituto.
+          </p>
+          <p>
+            Si tu acceso fue suspendido, comunícate con el director. Cuando te autorice, pulsa
+            Actualizar.
+          </p>
+        </section>
+      </main>
+    `;
+  }
+  function renderTechnician() {
+    document.title = 'Fallas y reparaciones · InventIC';
+    document.getElementById('app').innerHTML = html`
+      <main class="p-content" id="main-content">
+        ${portalHeader('Fallas y reparaciones', db.configuracion.institucion + ' · ' + user.nombre)}
+        <section class="surface">
+          <p>
+            Atiende las fallas de tu instituto. Al guardar una falla sin asignar, la reparación
+            quedará a tu cargo.
+          </p>
+          <p>El administrador debe recibir el equipo antes de iniciar la reparación.</p>
+        </section>
+        ${
+          db.reportes.length
+            ? db.reportes
+                .map(
+                  (report) => html`
+                    <section class="surface spaced">
+                      <h2>${esc(report.codigo)} · ${esc(report.nombre)}</h2>
+                      ${badge(states[report.estado_id - 1])}
+                      <p>${esc(report.descripcion)}</p>
+                      <p>Reportado: ${esc(report.fecha_reporte)}</p>
+                      ${
+                        Number(report.estado_id) >= 4
+                          ? details([
+                              ['Diagnóstico', report.diagnostico],
+                              ['Solución', report.solucion],
+                              ['Finalizado', report.fecha_fin]
+                            ])
+                          : Number(report.prestado)
+                            ? '<p>Pendiente de devolución: el administrador debe recibir el equipo.</p>'
+                            : report.tecnico_id && Number(report.tecnico_id) !== Number(user.id)
+                              ? '<p>Esta reparación está asignada a otro técnico.</p>'
+                              : form(
+                                  'technician-repair',
+                                  select(
+                                    'estado_id',
+                                    'Estado',
+                                    states.slice(1, 4).map((nombre, i) => ({ id: i + 2, nombre })),
+                                    Number(report.estado_id) === 1 ? 2 : report.estado_id,
+                                    true
+                                  ) +
+                                    area('diagnostico', 'Diagnóstico', report.diagnostico) +
+                                    area(
+                                      'solucion',
+                                      'Solución (obligatoria al finalizar)',
+                                      report.solucion
+                                    ),
+                                  'dashboard',
+                                  report.id
+                                )
+                      }
+                    </section>
+                  `
+                )
+                .join('')
+            : '<section class="surface spaced"><p>No hay fallas reportadas en tu instituto.</p></section>'
+        }
+      </main>
+    `;
+  }
   let studentClockOffset = 0;
   let studentSnapshot;
   function updateLoanTimers() {
@@ -1044,7 +1163,9 @@ ${esc(value)}</textarea>
       <main class="p-content" id="main-content" tabindex="-1">
         <header class="page-title-box">
           <div>
-            <span class="eyebrow">PORTAL DE ESTUDIANTES</span>
+            <span class="eyebrow">
+              ${esc(db.configuracion.institucion)} · PORTAL DE ESTUDIANTES
+            </span>
             <h1 class="page-title">Mis préstamos</h1>
             <p>
               Hola, ${esc(user.nombre)}. Aquí puedes consultar tus equipos y reportar una falla.
@@ -1141,8 +1262,7 @@ ${esc(value)}</textarea>
   }
 
   function renderLogin() {
-    const first = auth.needsSetup();
-    const setup = action === 'register' || (first && action !== 'signin');
+    const setup = action === 'register';
     document.body.classList.remove('density-compact');
     document.title = setup ? 'Crear cuenta · InventIC' : 'Iniciar sesión · InventIC';
     document.getElementById('app').innerHTML = view('auth/login.html#contenido', {
@@ -1158,11 +1278,32 @@ ${esc(value)}</textarea>
       institucion: esc(db.configuracion.institucion),
       tituloAcceso: setup ? 'Crea tu cuenta' : 'Iniciar sesión',
       instrucciones: setup
-        ? first
-          ? 'Configura la cuenta administradora para comenzar.'
-          : 'Crea tu cuenta de estudiante. El administrador podrá asignarte un préstamo con este correo.'
+        ? 'Elige tu rol. Si diriges un instituto, crea su espacio; si eres estudiante o técnico, solicita acceso con el código de tu director.'
         : 'Ingresa tu correo y contraseña para continuar.',
-      tipoFormulario: setup ? (first ? 'setup' : 'register') : 'login',
+      tipoFormulario: setup ? 'register' : 'login',
+      camposRegistro: setup
+        ? select(
+            'rol_id',
+            'Soy',
+            [
+              { id: 1, nombre: 'Administrador / director' },
+              { id: 2, nombre: 'Técnico' },
+              { id: 3, nombre: 'Estudiante' }
+            ],
+            '',
+            true
+          ) +
+          html`
+            <div id="register-institute" hidden>
+              ${field('institucion', 'Nombre de tu instituto', '', 'text', false, 'maxlength="100" disabled')}
+              <p>Crearás un instituto vacío y serás su administrador.</p>
+            </div>
+            <div id="register-code" hidden>
+              ${field('codigo', 'Código del instituto', '', 'text', false, 'maxlength="32" autocomplete="off" disabled')}
+              <p>Pide el código al director. Tu cuenta quedará pendiente de su aprobación.</p>
+            </div>
+          `
+        : '',
       campoNombre: setup
         ? field(
             'nombre',
@@ -1184,12 +1325,25 @@ ${esc(value)}</textarea>
             'minlength="8" maxlength="128" autocomplete="new-password"'
           )
         : '',
-      textoBoton: setup ? 'Crear cuenta' : 'Entrar',
+      textoBoton: setup ? 'Crear cuenta' : 'Iniciar sesión',
       ayuda: setup
         ? 'Usa una contraseña de al menos 8 caracteres.'
         : 'Si olvidaste tu contraseña, solicita el cambio al administrador.'
     });
   }
+  document.addEventListener('change', (event) => {
+    if (!event.target.matches('form[data-form="register"] [name="rol_id"]')) return;
+    const role = Number(event.target.value);
+    for (const [id, visible] of [
+      ['register-institute', role === 1],
+      ['register-code', [2, 3].includes(role)]
+    ]) {
+      const group = document.getElementById(id);
+      group.hidden = !visible;
+      group.querySelector('input').disabled = !visible;
+      group.querySelector('input').required = visible;
+    }
+  });
   function download(filename, content, type) {
     const blob = new Blob([content], { type });
     const href = URL.createObjectURL(blob);
@@ -1252,6 +1406,16 @@ ${esc(value)}</textarea>
         await store.load();
         render();
         notice('Falla enviada. El administrador puede consultarla en Reportes de fallas.');
+        return;
+      }
+      if (kind === 'technician-repair') {
+        await window.InventicApi.request('technician/repairs', 'POST', {
+          ...values,
+          reporte_id: id
+        });
+        await store.load();
+        render();
+        notice('Reparación actualizada correctamente.');
         return;
       }
       if (kind === 'filters') {
@@ -1404,6 +1568,16 @@ ${esc(value)}</textarea>
       if (act === 'student-refresh') {
         await store.load();
         render();
+        return;
+      }
+      if (['approve-user', 'suspend-user'].includes(act)) {
+        await window.InventicApi.request('institute/approval', 'POST', {
+          usuario_id: id,
+          aprobado: act === 'approve-user' ? 1 : 0
+        });
+        await store.load();
+        render();
+        notice(act === 'approve-user' ? 'Acceso aprobado.' : 'Acceso suspendido.');
         return;
       }
       if (act === 'toggle-password') {
