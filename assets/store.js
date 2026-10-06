@@ -10,11 +10,13 @@ window.InventicStore = (() => {
   }
 
   async function load() {
-    data = validate(await request('GET'));
+    const result = await request('GET');
+    data = result.scope === 'student' ? result : validate(result);
     return clone(data);
   }
 
   async function write(changes, restoring = false) {
+    if (data.scope === 'student') throw Error('Usa el formulario de fallas de tu préstamo.');
     validate(changes);
     if (restoring) changes.revision = data.revision;
     const result = await request('PUT', { data: changes, restoring });

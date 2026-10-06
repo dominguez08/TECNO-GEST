@@ -5,7 +5,7 @@
   const auth = window.InventicAuth;
   const html = (parts, ...values) =>
     parts.reduce((result, part, index) => result + part + (values[index] ?? ''), '');
-  const roles = ['Administrador', 'Técnico', 'Docente'];
+  const roles = ['Administrador', 'Técnico', 'Estudiante'];
   const states = ['Pendiente', 'En revisión', 'En reparación', 'Reparado', 'Cerrado'];
   const navigation = [
     ['dashboard', 'Panel', '▦'],
@@ -220,8 +220,6 @@ ${esc(value)}</textarea>
   const isAdmin = () => Number(user?.rol_id) === 1;
   const isStaff = () => [1, 2].includes(Number(user?.rol_id));
   const isStudent = () => Number(user?.rol_id) === 3;
-  const studentLoans = () => db.prestamos.filter((loan) => String(loan.usuario_id) === String(user.id));
-  const remainingDays = (date) => Math.ceil((new Date(`${date}T23:59:59`) - new Date()) / 86400000);
   function log(data, description, equipment = null) {
     data.actividad.push({
       id: store.next(data, 'actividad'),
@@ -329,25 +327,6 @@ ${esc(value)}</textarea>
     `;
   }
   function dashboard() {
-    if (isStudent()) {
-      const loans = studentLoans();
-      return html`
-        <header class="page-title-box"><div><h1 class="page-title">Mi equipo</h1><p>Consulta tus préstamos y reporta cualquier falla.</p></div></header>
-        <div class="metric-grid">
-          ${metric(loans.filter((loan) => !loan.devuelto_en).length, 'Préstamos activos', 'purple')}
-          ${metric(loans.filter((loan) => !loan.devuelto_en && remainingDays(loan.fecha_devolucion) >= 0).length, 'En plazo', 'green')}
-          ${metric(loans.filter((loan) => !loan.devuelto_en && remainingDays(loan.fecha_devolucion) < 0).length, 'Vencidos', 'red')}
-        </div>
-        <section class="surface spaced"><h2>Mis préstamos</h2>${table(
-          ['Equipo', 'Devolución', 'Tiempo restante', 'Estado', 'Acción'],
-          loans.slice().reverse().map((loan) => {
-            const days = remainingDays(loan.fecha_devolucion);
-            return [esc(eqName(loan.equipo_id)), esc(loan.fecha_devolucion), loan.devuelto_en ? 'Devuelto' : days < 0 ? `Vencido hace ${Math.abs(days)} días` : `${days} días`, loan.devuelto_en ? badge('Devuelto') : badge(days < 0 ? 'Atrasado' : 'En curso'), !loan.devuelto_en ? link('reportes', 'Reportar falla', 'create') : ''];
-          })
-        )}</section>
-        <section class="surface spaced"><h2>¿Tu equipo tiene una falla?</h2><p>Selecciona el equipo prestado y describe el problema.</p>${link('reportes', 'Reportar una falla', 'create', '', 'btn btn-primary')}</section>
-      `;
-    }
     return view('modules/dashboard/index.html#contenido', {
       contenido: isStaff()
         ? link('equipos', 'Registrar equipo', 'create', '', 'btn btn-primary')
@@ -600,7 +579,7 @@ ${esc(value)}</textarea>
               .filter(
                 (e) =>
                   ['Activo', 'En Mantenimiento'].includes(e.estado) &&
-                  (!activeLoan(e.id) || (isStudent() && String(activeLoan(e.id)?.usuario_id) === String(user.id))) &&
+                  !activeLoan(e.id) &&
                   !openReport(e.id)
               )
               .map((e) => ({ id: e.id, nombre: eqName(e.id) })),
@@ -800,7 +779,7 @@ ${esc(value)}</textarea>
               'Técnico',
               'Equipos, préstamos, ubicaciones y mantenimiento. Sin eliminación ni configuración.'
             ],
-            ['Docente', 'Consulta del panel, registro de fallas y edición de su perfil.']
+            ['Estudiante', 'Consulta sus préstamos y reporta fallas de los equipos prestados.']
           ]
         )
       });
@@ -888,6 +867,11 @@ ${esc(value)}</textarea>
       }
       if (route === 'logout') {
         auth.signOut().then(() => go('login'));
+        return;
+      }
+      if (isStudent()) {
+        renderStudent();
+        window.dispatchEvent(new Event('inventic:render'));
         return;
       }
       if (
@@ -1031,18 +1015,154 @@ ${esc(value)}</textarea>
     return fields;
   }
 
+  let studentClockOffset = 0;
+  let studentSnapshot;
+  function updateLoanTimers() {
+    document.querySelectorAll('[data-loan-deadline]').forEach((element) => {
+      const left = Date.parse(element.dataset.loanDeadline) - (Date.now() + studentClockOffset);
+      const minutes = Math.max(0, Math.ceil(left / 60000));
+      const days = Math.floor(minutes / 1440);
+      const hours = Math.floor((minutes % 1440) / 60);
+      element.textContent =
+        left <= 0
+          ? 'Plazo vencido: contacta al administrador'
+          : `${days} días, ${hours} horas y ${minutes % 60} minutos`;
+    });
+  }
+  setInterval(updateLoanTimers, 30000);
+
+  function renderStudent() {
+    if (studentSnapshot !== db.serverTime) {
+      studentClockOffset = Date.parse(db.serverTime) - Date.now();
+      studentSnapshot = db.serverTime;
+    }
+    document.title = 'Mis préstamos · InventIC';
+    document.body.classList.remove('density-compact');
+    const active = db.prestamos.filter((loan) => !loan.devuelto_en);
+    const reportable = active.filter((loan) => !Number(loan.falla_abierta));
+    document.getElementById('app').innerHTML = html`
+      <main class="p-content" id="main-content" tabindex="-1">
+        <header class="page-title-box">
+          <div>
+            <span class="eyebrow">PORTAL DE ESTUDIANTES</span>
+            <h1 class="page-title">Mis préstamos</h1>
+            <p>
+              Hola, ${esc(user.nombre)}. Aquí puedes consultar tus equipos y reportar una falla.
+            </p>
+          </div>
+          <div class="page-actions">
+            ${button('Actualizar', 'student-refresh')}${button('Cerrar sesión', 'logout')}
+          </div>
+        </header>
+        <div id="message" aria-live="polite"></div>
+        <section class="surface">
+          <h2>Equipos que tienes prestados</h2>
+          <p>El plazo termina a las 23:59 de la fecha de devolución, hora de El Salvador.</p>
+          ${
+            active.length
+              ? active
+                  .map(
+                    (loan) => html`
+                      <article class="surface spaced">
+                        <h3>${esc(loan.codigo)} · ${esc(loan.nombre)}</h3>
+                        <p>${esc(loan.marca)} ${esc(loan.modelo)}</p>
+                        <p>
+                          Prestado: ${esc(loan.fecha_prestamo)} · Devolución:
+                          ${esc(loan.fecha_devolucion)}
+                        </p>
+                        <p>
+                          <strong>Tiempo restante:</strong>
+                          <span data-loan-deadline="${esc(loan.vence_en)}"></span>
+                        </p>
+                        ${Number(loan.falla_abierta) ? '<p>Este equipo tiene una falla abierta. El administrador le dará seguimiento.</p>' : '<a class="btn btn-primary" href="#student-fault">Reportar una falla</a>'}
+                      </article>
+                    `
+                  )
+                  .join('')
+              : '<p>No tienes préstamos activos. El administrador debe asignarte uno usando tu cuenta.</p>'
+          }
+        </section>
+        <section class="surface spaced" id="student-fault">
+          <h2>Reportar una falla</h2>
+          ${
+            reportable.length
+              ? html`
+                  <form data-form="student-report">
+                    ${select(
+                      'prestamo_id',
+                      'Equipo prestado',
+                      reportable.map((loan) => ({
+                        id: loan.id,
+                        nombre: `${loan.codigo} · ${loan.nombre}`
+                      })),
+                      reportable.length === 1 ? reportable[0].id : '',
+                      true
+                    )}
+                    <div class="field">
+                      <label for="descripcion">Describe la falla *</label>
+                      <textarea
+                        class="form-control"
+                        id="descripcion"
+                        name="descripcion"
+                        required
+                        maxlength="4000"
+                      ></textarea>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Enviar falla</button>
+                  </form>
+                `
+              : '<p>Necesitas un préstamo activo sin una falla pendiente para enviar un reporte.</p>'
+          }
+        </section>
+        <section class="surface spaced">
+          <h2>Mis reportes</h2>
+          ${table(
+            ['Equipo', 'Falla', 'Fecha', 'Estado'],
+            db.reportes.map((report) => [
+              esc(`${report.codigo} · ${report.nombre}`),
+              esc(report.descripcion),
+              esc(report.fecha_reporte),
+              badge(states[report.estado_id - 1])
+            ])
+          )}
+        </section>
+        <section class="surface spaced">
+          <h2>Préstamos devueltos</h2>
+          ${table(
+            ['Equipo', 'Devolución'],
+            db.prestamos
+              .filter((loan) => loan.devuelto_en)
+              .map((loan) => [esc(`${loan.codigo} · ${loan.nombre}`), esc(loan.devuelto_en)])
+          )}
+        </section>
+      </main>
+    `;
+    updateLoanTimers();
+  }
+
   function renderLogin() {
-    const setup = auth.needsSetup();
+    const first = auth.needsSetup();
+    const setup = action === 'register' || (first && action !== 'signin');
     document.body.classList.remove('density-compact');
     document.title = setup ? 'Crear cuenta · InventIC' : 'Iniciar sesión · InventIC';
     document.getElementById('app').innerHTML = view('auth/login.html#contenido', {
+      opcionesAcceso: html`
+        <a class="btn ${setup ? 'btn-light' : 'btn-primary'}" href="#/login/signin">
+          Iniciar sesión
+        </a>
+        <a class="btn ${setup ? 'btn-primary' : 'btn-light'}" href="#/login/register">
+          Crear cuenta
+        </a>
+      `,
       nombreSistema: esc(db.configuracion.nombre),
       institucion: esc(db.configuracion.institucion),
       tituloAcceso: setup ? 'Crea tu cuenta' : 'Iniciar sesión',
       instrucciones: setup
-        ? 'Configura la cuenta administradora para comenzar.'
+        ? first
+          ? 'Configura la cuenta administradora para comenzar.'
+          : 'Crea tu cuenta de estudiante. El administrador podrá asignarte un préstamo con este correo.'
         : 'Ingresa tu correo y contraseña para continuar.',
-      tipoFormulario: setup ? 'setup' : 'login',
+      tipoFormulario: setup ? (first ? 'setup' : 'register') : 'login',
       campoNombre: setup
         ? field(
             'nombre',
@@ -1120,13 +1240,20 @@ ${esc(value)}</textarea>
           .map(([k, v]) => [k, k.includes('password') || k === 'confirmation' ? v : v.trim()])
       );
     try {
-      if (kind === 'login' || kind === 'setup') {
-        await auth.signIn(values, kind === 'setup');
+      if (['login', 'setup', 'register'].includes(kind)) {
+        await auth.signIn(values, kind);
         await store.load();
         go('dashboard');
         return;
       }
       if (!auth.currentUser(store.read())) throw Error('Inicia sesión para continuar.');
+      if (kind === 'student-report') {
+        await window.InventicApi.request('student/reports', 'POST', values);
+        await store.load();
+        render();
+        notice('Falla enviada. El administrador puede consultarla en Reportes de fallas.');
+        return;
+      }
       if (kind === 'filters') {
         const p = new URLSearchParams(Object.entries(values).filter(([, v]) => v));
         location.hash = `/${route}/index?${p}`;
@@ -1185,7 +1312,7 @@ ${esc(value)}</textarea>
           if (
             !e ||
             !['Activo', 'En Mantenimiento'].includes(e.estado) ||
-            (activeLoan(e.id) && String(activeLoan(e.id).usuario_id) !== String(user.id)) ||
+            activeLoan(e.id) ||
             openReport(e.id)
           )
             throw Error('El equipo no admite una nueva falla.');
@@ -1274,6 +1401,11 @@ ${esc(value)}</textarea>
         go('login');
         return;
       }
+      if (act === 'student-refresh') {
+        await store.load();
+        render();
+        return;
+      }
       if (act === 'toggle-password') {
         const input = document.getElementById('password');
         const visible = input.type === 'password';
@@ -1338,6 +1470,7 @@ ${esc(value)}</textarea>
           const p = find('prestamos', id);
           if (!p || p.devuelto_en) throw Error('Este préstamo ya fue devuelto.');
           p.devuelto_en = new Date().toISOString();
+          if (openReport(p.equipo_id)) find('equipos', p.equipo_id).estado = 'En Mantenimiento';
           log(current, 'Registró una devolución', p.equipo_id);
           return;
         }

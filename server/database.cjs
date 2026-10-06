@@ -28,10 +28,10 @@ const pool = mysql.createPool({
 
 let columns;
 
-async function loadData(connection = pool, actor = null) {
+async function loadData(connection = pool) {
   // Remove the old sample institution name from databases created by earlier versions.
   await connection.query(
-    "UPDATE configuracion SET valor = 'Mi institución' WHERE clave = 'institucion' AND (valor LIKE '%San Rafael%' OR valor LIKE '%IEP%')"
+    "UPDATE configuracion SET valor = 'Mi institución' WHERE clave = 'institucion' AND TRIM(valor) = 'IEP San Rafael'"
   );
   const data = { version: 1 };
   for (const table of tables) {
@@ -49,31 +49,6 @@ async function loadData(connection = pool, actor = null) {
   data.configuracion = Object.fromEntries(settings.map((row) => [row.clave, row.valor]));
   const [revision] = await connection.query('SELECT revision FROM app_metadata WHERE id = 1');
   data.revision = revision[0].revision;
-  if (actor && Number(actor.rol_id) === 3) {
-    const ownLoans = data.prestamos.filter((row) => String(row.usuario_id) === String(actor.id));
-    const equipmentIds = new Set(ownLoans.map((row) => String(row.equipo_id)));
-    const ownReports = data.reportes.filter(
-      (row) => String(row.usuario_id) === String(actor.id) || equipmentIds.has(String(row.equipo_id))
-    );
-    const reportIds = new Set(ownReports.map((row) => String(row.id)));
-    const equipment = data.equipos.filter((row) => equipmentIds.has(String(row.id)));
-    const locationIds = new Set(equipment.map((row) => String(row.ubicacion_id)));
-    const siteIds = new Set(
-      data.ubicaciones
-        .filter((row) => locationIds.has(String(row.id)))
-        .map((row) => String(row.sede_id))
-    );
-    data.usuarios = data.usuarios.filter((row) => String(row.id) === String(actor.id));
-    data.prestamos = ownLoans;
-    data.equipos = equipment;
-    data.reportes = ownReports;
-    data.mantenimientos = data.mantenimientos.filter((row) => reportIds.has(String(row.reporte_id)));
-    data.actividad = data.actividad.filter((row) => String(row.usuario_id) === String(actor.id));
-    data.ubicaciones = data.ubicaciones.filter((row) => locationIds.has(String(row.id)));
-    data.sedes = data.sedes.filter((row) => siteIds.has(String(row.id)));
-    const typeIds = new Set(equipment.map((row) => String(row.tipo_id)));
-    data.tipos_equipo = data.tipos_equipo.filter((row) => typeIds.has(String(row.id)));
-  }
   return data;
 }
 
@@ -134,6 +109,11 @@ async function setupAdmin({ nombre, email, password, confirmation }) {
 }
 
 async function saveData(data, validate, checkPermission, actor, restoring = false) {
+  if (![1, 2].includes(Number(actor.rol_id))) {
+    throw Object.assign(new Error('No tienes permiso para modificar el inventario.'), {
+      status: 403
+    });
+  }
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();

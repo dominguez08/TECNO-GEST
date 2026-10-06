@@ -45,14 +45,26 @@ HOST=0.0.0.0
 
 ## Funciones
 
-- Inicio de sesión y creación de la primera cuenta administradora.
-- Roles Administrador, Técnico y Docente.
+- Inicio de sesión, creación de la primera cuenta administradora y registro de estudiantes.
+- Roles Administrador, Técnico y Estudiante.
 - Portal de estudiante para consultar el tiempo restante de sus préstamos y reportar fallas de los equipos que tiene asignados.
 - Inventario de equipos, ubicaciones y sedes.
 - Préstamos y devoluciones.
 - Reportes de fallas y mantenimientos.
 - Configuración de la institución, usuarios y apariencia.
 - Exportación y restauración de respaldos JSON sin contraseñas.
+
+## Cuentas y préstamos de estudiantes
+
+La pantalla de acceso contiene **Iniciar sesión** y **Crear cuenta**. En una instalación vacía, la primera cuenta es administradora. Después, las cuentas creadas desde esta pantalla son de estudiantes; los administradores gestionan los demás roles desde Configuración.
+
+1. El estudiante crea su cuenta con nombre, correo y contraseña. Si el administrador ya creó esa cuenta, debe iniciar sesión con las credenciales asignadas.
+2. El administrador registra el préstamo y selecciona la cuenta del estudiante como destinatario.
+3. El estudiante inicia sesión y accede a **Mis préstamos**, donde solo aparecen sus equipos asignados, fechas, tiempo restante, devoluciones y reportes propios. El plazo termina a las 23:59 de la fecha de devolución, hora de El Salvador.
+4. Para informar una falla, selecciona un equipo prestado, describe el problema y pulsa **Enviar falla**. Solo puede existir una falla abierta por equipo.
+5. El administrador consulta el reporte pendiente. Al registrar la devolución, el equipo con una falla abierta pasa a mantenimiento; entonces puede asignar su reparación.
+
+El botón **Actualizar** consulta los últimos cambios. El contador de tiempo se actualiza automáticamente. Las cuentas de estudiantes no pueden consultar el inventario general ni modificar los datos administrativos.
 
 ## Almacenamiento
 
@@ -62,24 +74,27 @@ Cada instalación nueva comienza con una base vacía y su propia cuenta administ
 
 ## Estructura principal
 
-| Ruta | Función |
-| --- | --- |
-| `assets/app.js` | Navegación, pantallas y formularios |
-| `assets/api.js` | Comunicación con el servidor |
-| `assets/store.js` | Lectura y escritura mediante la API |
-| `assets/validation.js` | Validaciones del cliente y del servidor |
-| `server/index.cjs` | Servidor HTTP y rutas de la API |
-| `server/database.cjs` | Consultas y transacciones MySQL |
-| `server/permissions.cjs` | Permisos por rol |
-| `database.sql` | Esquema de la base de datos |
-| `tools/start.cjs` | Inicio local |
-| `compose.yaml` | Servicios Docker |
+| Ruta                     | Función                                 |
+| ------------------------ | --------------------------------------- |
+| `assets/app.js`          | Navegación, pantallas y formularios     |
+| `assets/api.js`          | Comunicación con el servidor            |
+| `assets/store.js`        | Lectura y escritura mediante la API     |
+| `assets/validation.js`   | Validaciones del cliente y del servidor |
+| `server/index.cjs`       | Servidor HTTP y rutas de la API         |
+| `server/database.cjs`    | Consultas y transacciones MySQL         |
+| `server/permissions.cjs` | Permisos por rol                        |
+| `database.sql`           | Esquema de la base de datos             |
+| `tools/start.cjs`        | Inicio local                            |
+| `compose.yaml`           | Servicios Docker                        |
 
 ## Pruebas y formato
 
 ```bash
 npm test
+node tests/student-portal.cjs
 npm run format
 ```
+
+La prueba del portal necesita MySQL local en el puerto 3307, las credenciales de `.runtime/mysql-admin.json` (o la ruta indicada en `TEST_MYSQL_ADMIN_FILE`) y Microsoft Edge. Crea y elimina una base de prueba independiente.
 
 No publiques `.env`, `.runtime/`, `mysql-data/` ni respaldos privados.

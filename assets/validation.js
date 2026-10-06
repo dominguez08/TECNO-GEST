@@ -107,10 +107,14 @@
         throw Error('Estado de reporte inválido.');
       if (Number(report.estado_id) < 4) {
         const id = String(report.equipo_id);
-        if (active.has(id) || open.has(id))
-          throw Error('El equipo está prestado o ya tiene una falla abierta.');
+        if (open.has(id)) throw Error('El equipo ya tiene una falla abierta.');
+        if (active.has(id) && Number(report.estado_id) !== 1)
+          throw Error('Registra la devolución antes de iniciar el mantenimiento.');
         open.add(id);
-        if (data.equipos.find((e) => String(e.id) === id).estado !== 'En Mantenimiento')
+        if (
+          !active.has(id) &&
+          data.equipos.find((e) => String(e.id) === id).estado !== 'En Mantenimiento'
+        )
           throw Error('El equipo con falla debe estar en mantenimiento.');
       }
     }

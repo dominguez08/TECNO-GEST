@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 if (fs.existsSync(path.join(root, '.env'))) process.loadEnvFile(path.join(root, '.env'));
 
 const database = require('./database.cjs');
+const students = require('./student.cjs')(database.pool);
 const { verifyPassword } = require('./security.cjs');
 const checkPermissions = require('./permissions.cjs');
 const validate = require('../assets/validation.js');
@@ -108,11 +109,10 @@ const server = http.createServer(async (request, response) => {
       }
       const user = await authenticatedUser(request);
       if (request.method === 'GET' && url.pathname === '/api/session') {
-        const data = await database.loadData();
         return send(response, 200, {
           user: safeUser(user),
           setup: await database.needsSetup(),
-          settings: data.configuracion
+          settings: { nombre: 'InventIC', institucion: 'Mi institución', moneda: 'USD' }
         });
       }
       if (request.method === 'POST' && url.pathname === '/api/setup') {
@@ -146,6 +146,12 @@ const server = http.createServer(async (request, response) => {
         startSession(request, response, account);
         return send(response, 200, { user: safeUser(account) });
       }
+      if (request.method === 'POST' && url.pathname === '/api/register') {
+        const id = await students.register(await readBody(request));
+        const account = await database.getUser(id);
+        startSession(request, response, account);
+        return send(response, 201, { user: safeUser(account) });
+      }
       if (request.method === 'POST' && url.pathname === '/api/logout') {
         sessions.delete(sessionId(request));
         response.setHeader(
@@ -155,8 +161,17 @@ const server = http.createServer(async (request, response) => {
         return send(response, 200, { ok: true });
       }
       if (!user) return send(response, 401, { error: 'Inicia sesión para continuar.' });
+      if (Number(user.rol_id) === 3) {
+        if (request.method === 'GET' && url.pathname === '/api/data')
+          return send(response, 200, await students.data(user));
+        if (request.method === 'POST' && url.pathname === '/api/student/reports')
+          return send(response, 201, await students.report(user, await readBody(request)));
+        return send(response, 403, {
+          error: 'Tu cuenta solo puede consultar sus préstamos y reportar fallas.'
+        });
+      }
       if (request.method === 'GET' && url.pathname === '/api/data')
-        return send(response, 200, await database.loadData(database.pool, user));
+        return send(response, 200, await database.loadData());
       if (request.method === 'PUT' && url.pathname === '/api/data') {
         const body = await readBody(request);
         const data = await database.saveData(
@@ -168,7 +183,7 @@ const server = http.createServer(async (request, response) => {
         );
         const current = await database.getUser(user.id);
         if (current.password !== user.password) startSession(request, response, current);
-        return send(response, 200, Number(user.rol_id) === 3 ? await database.loadData(database.pool, user) : data);
+        return send(response, 200, data);
       }
       return send(response, 404, { error: 'La operación no existe.' });
     }

@@ -11,8 +11,8 @@ window.InventicAuth = (() => {
     return session;
   }
 
-  async function signIn(values, setup = false) {
-    const result = await request(setup ? 'setup' : 'login', values);
+  async function signIn(values, mode = 'login') {
+    const result = await request(mode === true ? 'setup' : mode === false ? 'login' : mode, values);
     session.user = result.user;
     session.setup = false;
   }
