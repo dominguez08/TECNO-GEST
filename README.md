@@ -97,6 +97,8 @@ Si Google revoca la autorización o expira el refresh token, autoriza de nuevo l
 
 ## Almacenamiento y respaldos
 
+Los avisos de registro e inicio de sesión incluyen el logo de InventIC como imagen PNG integrada en el correo, junto con una versión HTML y otra de texto. El recurso utilizado es `assets/logo-mail.png`.
+
 Los usuarios, inventarios, préstamos, fallas, reparaciones y configuraciones se guardan en MySQL. El navegador no usa `localStorage` para guardar datos de trabajo. Las contraseñas se almacenan con scrypt y las sesiones usan una cookie HttpOnly.
 
 Cada instituto nuevo comienza vacío. Las consultas y modificaciones se limitan al instituto de la cuenta autenticada. Desde **Configuración → Respaldos**, el director puede exportar sus datos a JSON, sin contraseñas, y restaurar un respaldo del mismo instituto. Las cuentas recuperadas sin contraseña necesitan que el director les asigne una.

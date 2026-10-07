@@ -1,4 +1,7 @@
 const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const mailLogo = fs.readFileSync(path.join(__dirname, '../assets/logo-mail.png'));
 
 async function migrate(connection) {
   await connection.query(`CREATE TABLE IF NOT EXISTS avisos_correo (
@@ -82,7 +85,7 @@ function gmailTransport(env = process.env, fetcher = fetch) {
   );
   let token,
     expires = 0;
-  const logoUrl = env.MAIL_LOGO_URL || 'https://inventic-production.up.railway.app/assets/logo.svg';
+  const logoUrl = 'cid:inventic-logo';
   async function send(job) {
     if (!configured) throw new Error('GMAIL_NOT_CONFIGURED');
     if (!address(job.destinatario)) throw new Error('INVALID_RECIPIENT');
@@ -105,12 +108,16 @@ function gmailTransport(env = process.env, fetcher = fetch) {
       expires = Date.now() + Math.max(0, (Number(data.expires_in) || 3600) - 60) * 1000;
     }
     const boundary = `inventic_${job.id.replaceAll('-', '')}`;
+    const related = `${boundary}_related`;
     const mime = [
       `From: InventIC <${env.MAIL_FROM}>`,
       `To: ${job.destinatario}`,
       `Subject: =?UTF-8?B?${Buffer.from(job.asunto).toString('base64')}?=`,
       `Message-ID: <${job.id}@inventic.invalid>`,
       'MIME-Version: 1.0',
+      `Content-Type: multipart/related; boundary="${related}"`,
+      '',
+      `--${related}`,
       `Content-Type: multipart/alternative; boundary="${boundary}"`,
       '',
       `--${boundary}`,
@@ -124,6 +131,14 @@ function gmailTransport(env = process.env, fetcher = fetch) {
       '',
       Buffer.from(htmlContent(job, logoUrl)).toString('base64').match(/.{1,76}/g).join('\r\n'),
       `--${boundary}--`,
+      `--${related}`,
+      'Content-Type: image/png; name="inventic.png"',
+      'Content-Transfer-Encoding: base64',
+      'Content-ID: <inventic-logo>',
+      'Content-Disposition: inline; filename="inventic.png"',
+      '',
+      mailLogo.toString('base64').match(/.{1,76}/g).join('\r\n'),
+      `--${related}--`,
       ''
     ].join('\r\n');
     const response = await fetcher('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {

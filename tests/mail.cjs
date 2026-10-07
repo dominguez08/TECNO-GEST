@@ -44,7 +44,14 @@ test('Gmail uses OAuth, UTF-8 MIME and only the account recipient', async () => 
   assert.match(body, /9:00:00/);
   assert.match(mime, /Content-Type: text\/html; charset=UTF-8/);
   const htmlPart = mime.split('Content-Type: text/html; charset=UTF-8\r\n')[1];
-  assert.match(Buffer.from(htmlPart.split('\r\n\r\n')[1].split('\r\n--')[0].replaceAll('\r\n', ''), 'base64').toString('utf8'), /inventic-production\.up\.railway\.app\/assets\/logo\.svg/);
+  const html = Buffer.from(htmlPart.split('\r\n\r\n')[1].split('\r\n--')[0].replaceAll('\r\n', ''), 'base64').toString('utf8');
+  assert.match(html, /src="cid:inventic-logo"/);
+  assert.match(mime, /Content-Type: multipart\/related;/);
+  assert.match(mime, /Content-ID: <inventic-logo>/);
+  const imagePart = mime.split('Content-Disposition: inline; filename="inventic.png"\r\n\r\n')[1];
+  const png = Buffer.from(imagePart.split('\r\n--')[0].replaceAll('\r\n', ''), 'base64');
+  assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  assert.ok(png.length > 1000);
   assert.match(message('registro').contenido, /se registró correctamente y se inició sesión/);
   await assert.rejects(
     () => transport.send({ ...job, destinatario: 'victim@example.test\r\nBcc:bad@example.test' }),
