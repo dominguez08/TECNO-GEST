@@ -21,6 +21,11 @@ function allowedOrigins(env = process.env) {
     }
     origins.add(url.origin);
   }
+  // A Railway domain rename can leave the running environment on the old URL.
+  // This explicit alias belongs to this deployment; never trust arbitrary hosts.
+  if (origins.has('https://inventic-production.up.railway.app')) {
+    origins.add('https://tecno-gest-production.up.railway.app');
+  }
   return origins;
 }
 

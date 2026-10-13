@@ -24,3 +24,23 @@ test('local development and explicit custom domains remain supported', () => {
   assert.equal(origins.has('https://other.example.com'), false);
   assert.throws(() => allowedOrigins({ APP_ORIGIN: 'file:///tmp/app' }));
 });
+
+test('renamed deployment works when Railway still configures the previous domain', () => {
+  for (const env of [
+    { RAILWAY_PUBLIC_DOMAIN: 'inventic-production.up.railway.app' },
+    { APP_ORIGIN: 'https://inventic-production.up.railway.app' }
+  ]) {
+    const origins = allowedOrigins(env);
+    assert.ok(origins.has('https://tecno-gest-production.up.railway.app'));
+    for (const origin of [
+      'https://untrusted.example',
+      'https://other.up.railway.app',
+      'https://tecno-gest-production.up.railway.app.attacker.test',
+      'http://tecno-gest-production.up.railway.app',
+      'null'
+    ]) assert.equal(origins.has(origin), false);
+  }
+  assert.equal(allowedOrigins({}).has('https://tecno-gest-production.up.railway.app'), false);
+  assert.equal(allowedOrigins({ RAILWAY_PUBLIC_DOMAIN: 'other.up.railway.app' })
+    .has('https://tecno-gest-production.up.railway.app'), false);
+});
