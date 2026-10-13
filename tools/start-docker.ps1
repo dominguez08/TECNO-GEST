@@ -11,8 +11,8 @@ try {
         Set-Content -LiteralPath '.docker.env' -Value "INVENTIC_DB_PASSWORD=$databasePassword" -Encoding ASCII
     }
     docker compose --env-file .docker.env up --build --detach --wait --wait-timeout 240
-    if ($LASTEXITCODE -ne 0) { throw 'No se pudo iniciar InventIC. Revisa el mensaje anterior y comprueba que el puerto 3000 esté libre.' }
-    Write-Host 'InventIC disponible en http://localhost:3000'
+    if ($LASTEXITCODE -ne 0) { throw 'No se pudo iniciar TECNO-GEST. Revisa el mensaje anterior y comprueba que el puerto 3000 esté libre.' }
+    Write-Host 'TECNO-GEST disponible en http://localhost:3000'
 } catch {
     Write-Host $_.Exception.Message
     exit 1

@@ -14,3 +14,12 @@
 !tools/container-start.cjs
 !database.sql
 !index.html
+
+# No enviar medios locales al contexto de construccion.
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.webp
+**/*.gif
+**/*.docx
+**/*.pdf

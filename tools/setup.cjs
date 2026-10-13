@@ -20,10 +20,10 @@ async function ensureDependencies(root) {
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 22)
     throw Error(
-      'Instala Node.js 22 o superior desde https://nodejs.org y vuelve a abrir InventIC.'
+      'Instala Node.js 22 o superior desde https://nodejs.org y vuelve a abrir TECNO-GEST.'
     );
   if (fs.existsSync(path.join(root, 'node_modules/mysql2/package.json'))) return;
-  console.log('Primera instalación: descargando las dependencias de InventIC…');
+  console.log('Primera instalación: descargando las dependencias de TECNO-GEST…');
   const cli = path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
   if (fs.existsSync(cli)) {
     await run(process.execPath, [cli, 'ci', '--omit=dev', '--no-audit', '--no-fund'], root);
@@ -85,7 +85,7 @@ async function freePort(preferred) {
     });
     if (available) return port;
   }
-  throw Error('No hay un puerto libre para iniciar InventIC.');
+  throw Error('No hay un puerto libre para iniciar TECNO-GEST.');
 }
 
 function launchMysql(root, executable, port) {

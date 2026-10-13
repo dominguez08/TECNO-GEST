@@ -20,7 +20,7 @@
       !data.configuracion.nombre.trim() ||
       typeof data.configuracion.institucion !== 'string'
     )
-      throw Error('El respaldo no tiene el formato de InventIC.');
+      throw Error('El respaldo no tiene el formato de TECNO-GEST.');
     if (!data.configuracion.institucion.trim()) throw Error('Escribe el nombre de la institución.');
     if (data.configuracion.institucion.length > 100)
       throw Error('El nombre del instituto admite hasta 100 caracteres.');

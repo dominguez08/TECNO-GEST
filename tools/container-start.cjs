@@ -20,6 +20,6 @@ async function start() {
 }
 
 start().catch((error) => {
-  console.error('No se pudo preparar InventIC: ' + error.message);
+  console.error('No se pudo preparar TECNO-GEST: ' + error.message);
   process.exitCode = 1;
 });

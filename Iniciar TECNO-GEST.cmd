@@ -7,7 +7,7 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-echo Iniciando InventIC...
+echo Iniciando TECNO-GEST...
 echo La primera vez se preparan las dependencias y la base de datos.
 echo Al terminar abre la direccion que aparece en esta ventana.
 node tools/start.cjs

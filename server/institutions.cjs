@@ -138,7 +138,7 @@ function service(pool) {
         );
         instituteId = result.insertId;
         for (const [key, value] of Object.entries({
-          nombre: 'InventIC',
+          nombre: 'TECNO-GEST',
           institucion: institucion.trim(),
           moneda: 'USD'
         }))
@@ -179,7 +179,7 @@ function service(pool) {
     return {
       scope: 'pending',
       usuarios: [{ id: actor.id, nombre: actor.nombre, rol_id: actor.rol_id, aprobado: 0 }],
-      configuracion: { nombre: 'InventIC', institucion: rows[0].nombre, moneda: 'USD' }
+      configuracion: { nombre: 'TECNO-GEST', institucion: rows[0].nombre, moneda: 'USD' }
     };
   }
   async function approve(actor, { usuario_id, aprobado }) {

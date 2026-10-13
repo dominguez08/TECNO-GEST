@@ -195,7 +195,6 @@ ${esc(value)}</textarea>
     </dl>
   `;
   const photo = (e) =>
-    /^(assets\/images\/[a-z0-9-]+\.jpg)$/.test(e.fotografia || '') ||
     /^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(e.fotografia || '')
       ? html`
           <img class="equipment-photo" src="${esc(e.fotografia)}" alt="${esc(e.nombre)}" />
@@ -934,7 +933,7 @@ ${esc(value)}</textarea>
       if (!views[route]) throw Error('La página solicitada no existe.');
       document.body.classList.toggle('density-compact', user.apariencia === 'compacto');
       document.title =
-        (navigation.find((n) => n[0] === route)?.[1] || 'InventIC') +
+        (navigation.find((n) => n[0] === route)?.[1] || 'TECNO-GEST') +
         ' · ' +
         db.configuracion.nombre;
       const content = views[route]();
@@ -942,7 +941,7 @@ ${esc(value)}</textarea>
         <div id="wrapper">
           <aside id="sidebar-wrapper">
             <a class="sidebar-brand" href="#/dashboard/index">
-              <img class="sidebar-logo" src="assets/logo.svg" alt="Logo InventIC" />
+              <img class="sidebar-logo" src="assets/logo.svg" alt="Logo TECNO-GEST" />
               <div>
                 ${esc(db.configuracion.nombre)}
                 <span>${esc(db.configuracion.institucion)}</span>
@@ -1007,7 +1006,7 @@ ${esc(value)}</textarea>
     } catch (error) {
       document.getElementById('app').innerHTML = html`
         <main class="surface login-card">
-          <h1>InventIC</h1>
+          <h1>TECNO-GEST</h1>
           <div id="message"><p role="alert">${esc(error.message)}</p></div>
           <a class="btn btn-primary" href="#/login/index">Volver al acceso local</a>
         </main>
@@ -1055,7 +1054,7 @@ ${esc(value)}</textarea>
     );
   }
   function renderPending() {
-    document.title = 'Acceso pendiente · InventIC';
+    document.title = 'Acceso pendiente · TECNO-GEST';
     document.getElementById('app').innerHTML = html`
       <main class="p-content" id="main-content">
         ${portalHeader('Acceso pendiente', db.configuracion.institucion)}
@@ -1074,7 +1073,7 @@ ${esc(value)}</textarea>
     `;
   }
   function renderTechnician() {
-    document.title = 'Fallas y reparaciones · InventIC';
+    document.title = 'Fallas y reparaciones · TECNO-GEST';
     document.getElementById('app').innerHTML = html`
       <main class="p-content" id="main-content">
         ${portalHeader('Fallas y reparaciones', db.configuracion.institucion + ' · ' + user.nombre)}
@@ -1155,7 +1154,7 @@ ${esc(value)}</textarea>
       studentClockOffset = Date.parse(db.serverTime) - Date.now();
       studentSnapshot = db.serverTime;
     }
-    document.title = 'Mis préstamos · InventIC';
+    document.title = 'Mis préstamos · TECNO-GEST';
     document.body.classList.remove('density-compact');
     const active = db.prestamos.filter((loan) => !loan.devuelto_en);
     const reportable = active.filter((loan) => !Number(loan.falla_abierta));
@@ -1264,7 +1263,7 @@ ${esc(value)}</textarea>
   function renderLogin() {
     const setup = action === 'register';
     document.body.classList.remove('density-compact');
-    document.title = setup ? 'Crear cuenta · InventIC' : 'Iniciar sesión · InventIC';
+    document.title = setup ? 'Crear cuenta · TECNO-GEST' : 'Iniciar sesión · TECNO-GEST';
     document.getElementById('app').innerHTML = view('auth/login.html#contenido', {
       opcionesAcceso: html`
         <a class="btn ${setup ? 'btn-light' : 'btn-primary'}" href="#/login/signin">
@@ -1599,7 +1598,7 @@ ${esc(value)}</textarea>
       }
       if (act === 'backup') {
         download(
-          `InventIC-${today()}.json`,
+          `TECNO-GEST-${today()}.json`,
           JSON.stringify(await store.load(), null, 2),
           'application/json'
         );
@@ -1724,7 +1723,7 @@ ${esc(value)}</textarea>
           <p>${esc(error.message)}</p>
           <p>
             Inicia el proyecto con
-            <strong>Iniciar InventIC.cmd</strong>
+            <strong>Iniciar TECNO-GEST.cmd</strong>
             y abre
             <strong>http://localhost:3000</strong>
             .

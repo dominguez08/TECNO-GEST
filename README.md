@@ -1,13 +1,13 @@
-# InventIC
+# TECNO-GEST
 
-InventIC administra inventarios, préstamos, fallas y reparaciones de varios institutos. Cada instituto tiene sus propios usuarios y datos. La aplicación usa Node.js y MySQL.
+TECNO-GEST administra inventarios, préstamos, fallas y reparaciones de varios institutos. Cada instituto tiene sus propios usuarios y datos. La aplicación usa Node.js y MySQL.
 
 ## Uso local en Windows
 
 Requisitos: Node.js 22 o superior y MySQL 8. También puedes usar MySQL incluido en WAMP.
 
 1. Descarga el proyecto y extrae la carpeta completa.
-2. Ejecuta `Iniciar InventIC.cmd` o abre una terminal en la carpeta y ejecuta `npm start`.
+2. Ejecuta `Iniciar TECNO-GEST.cmd` o abre una terminal en la carpeta y ejecuta `npm start`.
 3. Abre la dirección indicada, normalmente `http://localhost:3000`.
 4. Pulsa **Crear cuenta**, elige **Administrador / director** y escribe el nombre de tu instituto.
 5. Configura tus sedes, categorías de equipo y usuarios desde el panel.
@@ -97,7 +97,11 @@ Si Google revoca la autorización o expira el refresh token, autoriza de nuevo l
 
 ## Almacenamiento y respaldos
 
-Los avisos de registro e inicio de sesión incluyen el logo de InventIC como imagen PNG integrada en el correo, junto con una versión HTML y otra de texto. El recurso utilizado es `assets/logo-mail.png`.
+Los avisos de registro e inicio de sesión muestran TECNO-GEST como texto e incluyen versiones HTML y de texto plano, sin imágenes adjuntas.
+
+## Archivos publicados
+
+El repositorio contiene el código y la configuración del proyecto. Los documentos académicos, capturas, fotos y archivos generados se conservan localmente y se excluyen mediante `.gitignore`. El logo SVG es un recurso vectorial de la interfaz. Las imágenes cargadas por usuarios se almacenan con sus datos y no se incluyen en Git.
 
 Los usuarios, inventarios, préstamos, fallas, reparaciones y configuraciones se guardan en MySQL. El navegador no usa `localStorage` para guardar datos de trabajo. Las contraseñas se almacenan con scrypt y las sesiones usan una cookie HttpOnly.
 

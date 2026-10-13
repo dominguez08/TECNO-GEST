@@ -115,7 +115,7 @@ const server = http.createServer(async (request, response) => {
         return send(response, 200, {
           user: safeUser(user),
           setup: false,
-          settings: { nombre: 'InventIC', institucion: 'Plataforma para institutos', moneda: 'USD' }
+          settings: { nombre: 'TECNO-GEST', institucion: 'Plataforma para institutos', moneda: 'USD' }
         });
       }
       if (request.method === 'POST' && url.pathname === '/api/setup') {
@@ -250,12 +250,12 @@ async function start() {
     connection.release();
   }
   server.listen(port, process.env.HOST || '127.0.0.1', () =>
-    console.log(`InventIC disponible en http://localhost:${port}`)
+    console.log(`TECNO-GEST disponible en http://localhost:${port}`)
   );
   mail.start();
 }
 start().catch(async (error) => {
-  console.error('No se pudo actualizar InventIC: ' + error.message);
+  console.error('No se pudo actualizar TECNO-GEST: ' + error.message);
   await database.pool.end();
   process.exitCode = 1;
 });

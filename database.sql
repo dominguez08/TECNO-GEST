@@ -1,4 +1,4 @@
--- Esquema MySQL de InventIC. La instalación crea una base nueva.
+-- Esquema MySQL de TECNO-GEST. La instalación crea una base nueva.
 CREATE TABLE `sedes` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nombre` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,

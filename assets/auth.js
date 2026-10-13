@@ -21,7 +21,7 @@ window.InventicAuth = (() => {
     await request('logout', {});
     session.user = null;
     window.InventicStore.setSettings({
-      nombre: 'InventIC',
+      nombre: 'TECNO-GEST',
       institucion: 'Plataforma para institutos',
       moneda: 'USD'
     });

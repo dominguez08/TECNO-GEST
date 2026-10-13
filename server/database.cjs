@@ -65,6 +65,7 @@ async function loadData(actor, connection = pool) {
     [actor.instituto_id]
   );
   data.configuracion = Object.fromEntries(settings.map((row) => [row.clave, row.valor]));
+  if (/^inventic$/i.test(data.configuracion.nombre || '')) data.configuracion.nombre = 'TECNO-GEST';
   const [revision] = await connection.execute(
     'SELECT id,nombre,codigo,revision FROM institutos WHERE id = ?',
     [actor.instituto_id]

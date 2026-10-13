@@ -1,7 +1,4 @@
 const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const mailLogo = fs.readFileSync(path.join(__dirname, '../assets/logo-mail.png'));
 
 async function migrate(connection) {
   await connection.query(`CREATE TABLE IF NOT EXISTS avisos_correo (
@@ -34,13 +31,13 @@ function message(type, date = new Date()) {
     timeStyle: 'long'
   }).format(date);
   const asunto =
-    type === 'registro' ? 'Tu cuenta de InventIC fue creada' : 'Nuevo inicio de sesión en InventIC';
+    type === 'registro' ? 'Tu cuenta de TECNO-GEST fue creada' : 'Nuevo inicio de sesión en TECNO-GEST';
   const contenido = [
     'Hola,',
     '',
     type === 'registro'
-      ? 'Tu cuenta se registró correctamente y se inició sesión en InventIC.'
-      : 'Se inició sesión correctamente en tu cuenta de InventIC.',
+      ? 'Tu cuenta se registró correctamente y se inició sesión en TECNO-GEST.'
+      : 'Se inició sesión correctamente en tu cuenta de TECNO-GEST.',
     '',
     `Fecha y hora de El Salvador: ${fecha}`,
     '',
@@ -49,7 +46,7 @@ function message(type, date = new Date()) {
       ? 'Si no creaste esta cuenta, contacta con el administrador del instituto.'
       : 'Si no reconoces este acceso, contacta cuanto antes con el administrador de tu instituto para cambiar tu contraseña.',
     '',
-    'Este es un aviso automático de seguridad de InventIC. Nunca te pediremos tu contraseña por correo.'
+    'Este es un aviso automático de seguridad de TECNO-GEST. Nunca te pediremos tu contraseña por correo.'
   ].join('\n');
   return { asunto, contenido };
 }
@@ -63,16 +60,16 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-function htmlContent(job, logoUrl) {
+function htmlContent(job) {
   const paragraphs = escapeHtml(job.contenido)
     .split('\n')
     .map((line) => (line ? `<p style="margin:0 0 12px">${line}</p>` : '<div style="height:4px"></div>'))
     .join('');
   return `<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#182b45">
     <div style="max-width:600px;margin:24px auto;background:#fff;border:1px solid #d9e2ec;border-radius:12px;overflow:hidden">
-      <div style="padding:20px 24px;background:#052851;text-align:center"><img src="${escapeHtml(logoUrl)}" alt="InventIC" width="120" style="display:inline-block;max-width:120px;height:auto"></div>
+      <div style="padding:20px 24px;background:#052851;text-align:center;color:#fff;font-size:24px;font-weight:bold">TECNO-GEST</div>
       <div style="padding:28px 24px"><h1 style="font-size:20px;margin:0 0 20px;color:#165da7">${escapeHtml(job.asunto)}</h1>${paragraphs}</div>
-      <div style="padding:16px 24px;background:#f8fafc;color:#52647b;font-size:12px">Aviso automático de seguridad de InventIC.</div>
+      <div style="padding:16px 24px;background:#f8fafc;color:#52647b;font-size:12px">Aviso automático de seguridad de TECNO-GEST.</div>
     </div></body></html>`;
 }
 
@@ -85,7 +82,6 @@ function gmailTransport(env = process.env, fetcher = fetch) {
   );
   let token,
     expires = 0;
-  const logoUrl = 'cid:inventic-logo';
   async function send(job) {
     if (!configured) throw new Error('GMAIL_NOT_CONFIGURED');
     if (!address(job.destinatario)) throw new Error('INVALID_RECIPIENT');
@@ -107,17 +103,13 @@ function gmailTransport(env = process.env, fetcher = fetch) {
       token = data.access_token;
       expires = Date.now() + Math.max(0, (Number(data.expires_in) || 3600) - 60) * 1000;
     }
-    const boundary = `inventic_${job.id.replaceAll('-', '')}`;
-    const related = `${boundary}_related`;
+    const boundary = `tecno_gest_${job.id.replaceAll('-', '')}`;
     const mime = [
-      `From: InventIC <${env.MAIL_FROM}>`,
+      `From: TECNO-GEST <${env.MAIL_FROM}>`,
       `To: ${job.destinatario}`,
       `Subject: =?UTF-8?B?${Buffer.from(job.asunto).toString('base64')}?=`,
-      `Message-ID: <${job.id}@inventic.invalid>`,
+      `Message-ID: <${job.id}@tecno-gest.invalid>`,
       'MIME-Version: 1.0',
-      `Content-Type: multipart/related; boundary="${related}"`,
-      '',
-      `--${related}`,
       `Content-Type: multipart/alternative; boundary="${boundary}"`,
       '',
       `--${boundary}`,
@@ -129,16 +121,8 @@ function gmailTransport(env = process.env, fetcher = fetch) {
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: base64',
       '',
-      Buffer.from(htmlContent(job, logoUrl)).toString('base64').match(/.{1,76}/g).join('\r\n'),
+      Buffer.from(htmlContent(job)).toString('base64').match(/.{1,76}/g).join('\r\n'),
       `--${boundary}--`,
-      `--${related}`,
-      'Content-Type: image/png; name="inventic.png"',
-      'Content-Transfer-Encoding: base64',
-      'Content-ID: <inventic-logo>',
-      'Content-Disposition: inline; filename="inventic.png"',
-      '',
-      mailLogo.toString('base64').match(/.{1,76}/g).join('\r\n'),
-      `--${related}--`,
       ''
     ].join('\r\n');
     const response = await fetcher('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {

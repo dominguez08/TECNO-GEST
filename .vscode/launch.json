@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Iniciar InventIC (servidor y navegador)",
+      "name": "Iniciar TECNO-GEST (servidor y navegador)",
       "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/tools/start.cjs",
@@ -10,7 +10,7 @@
       "console": "internalConsole",
       "autoAttachChildProcesses": true,
       "serverReadyAction": {
-        "pattern": "InventIC (?:ya está )?disponible en (http://localhost:[0-9]+)",
+        "pattern": "TECNO-GEST (?:ya está )?disponible en (http://localhost:[0-9]+)",
         "uriFormat": "%s",
         "action": "openExternally"
       },

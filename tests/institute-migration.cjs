@@ -46,7 +46,7 @@ const root = path.resolve(__dirname, '..');
       "INSERT INTO equipos (id,codigo,nombre,tipo_id,ubicacion_id) VALUES (1,'LEG-1','Equipo existente',1,1)"
     );
     await connection.query(
-      "INSERT INTO configuracion (clave,valor) VALUES ('nombre','InventIC'),('institucion','IEP San Rafael'),('moneda','USD')"
+      "INSERT INTO configuracion (clave,valor) VALUES ('nombre','TECNO-GEST'),('institucion','IEP San Rafael'),('moneda','USD')"
     );
     await migrate(connection);
     await migrate(connection);

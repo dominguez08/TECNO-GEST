@@ -26,7 +26,7 @@ function studentService(pool) {
       prestamos: loans,
       reportes: reports,
       usuarios: [{ id: actor.id, nombre: actor.nombre, rol_id: 3 }],
-      configuracion: { nombre: 'InventIC', institucion: institute[0].nombre, moneda: 'USD' }
+      configuracion: { nombre: 'TECNO-GEST', institucion: institute[0].nombre, moneda: 'USD' }
     };
   }
 

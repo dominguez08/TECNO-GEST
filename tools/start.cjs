@@ -60,7 +60,7 @@ async function start() {
         `El puerto ${appPort} está ocupado o la base de datos no responde. Revisa la consola del servidor.`
       );
     }
-    console.log(`InventIC ya está disponible en http://localhost:${appPort}`);
+    console.log(`TECNO-GEST ya está disponible en http://localhost:${appPort}`);
     return;
   }
   const child = spawn(process.execPath, [path.join(root, 'server/index.cjs')], {

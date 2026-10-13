@@ -6,7 +6,7 @@ window.InventicApi = (() => {
 
   async function connect() {
     if (location.protocol === 'file:') {
-      throw Error('Abre la carpeta en VS Code y pulsa F5 para iniciar InventIC.');
+      throw Error('Abre la carpeta en VS Code y pulsa F5 para iniciar TECNO-GEST.');
     }
     const candidates = [new URL('api/', document.baseURI).href];
     if (['localhost', '127.0.0.1'].includes(location.hostname)) {
@@ -63,7 +63,7 @@ window.InventicApi = (() => {
     }
     if (!response.headers.get('content-type')?.includes('application/json')) {
       throw Error(
-        'Esta dirección no corresponde al servidor de InventIC. Abre http://localhost:3000.'
+        'Esta dirección no corresponde al servidor de TECNO-GEST. Abre http://localhost:3000.'
       );
     }
     const result = await response.json();

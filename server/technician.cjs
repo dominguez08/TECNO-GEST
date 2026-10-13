@@ -17,7 +17,7 @@ module.exports = function technicianService(pool) {
       scope: 'technician',
       reportes: reports,
       usuarios: [{ id: actor.id, nombre: actor.nombre, rol_id: 2 }],
-      configuracion: { nombre: 'InventIC', institucion: institute[0].nombre, moneda: 'USD' }
+      configuracion: { nombre: 'TECNO-GEST', institucion: institute[0].nombre, moneda: 'USD' }
     };
   }
   async function repair(actor, { reporte_id, estado_id, diagnostico = '', solucion = '' }) {

@@ -4,7 +4,7 @@ function publicError(error) {
       status: 503,
       code: 'DATABASE_CONFIGURATION',
       error:
-        'MySQL rechazó las credenciales de conexión a la base de datos. Revisa DB_HOST, DB_PORT, DB_USER y DB_PASS en el archivo .env de esta computadora. No se trata del correo ni de la contraseña de tu cuenta de InventIC.'
+        'MySQL rechazó las credenciales de conexión a la base de datos. Revisa DB_HOST, DB_PORT, DB_USER y DB_PASS en el archivo .env de esta computadora. No se trata del correo ni de la contraseña de tu cuenta de TECNO-GEST.'
     };
   }
   if (['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EHOSTUNREACH'].includes(error.code)) {
@@ -12,7 +12,7 @@ function publicError(error) {
       status: 503,
       code: 'DATABASE_UNAVAILABLE',
       error:
-        'No se pudo conectar con la base de datos. Ejecuta Iniciar InventIC.cmd y revisa que el servidor MySQL configurado en .env esté disponible.'
+        'No se pudo conectar con la base de datos. Ejecuta Iniciar TECNO-GEST.cmd y revisa que el servidor MySQL configurado en .env esté disponible.'
     };
   }
   if (['ER_BAD_DB_ERROR', 'ER_NO_SUCH_TABLE'].includes(error.code)) {
@@ -20,7 +20,7 @@ function publicError(error) {
       status: 503,
       code: 'DATABASE_CONFIGURATION',
       error:
-        'La base de datos de InventIC no está instalada o está incompleta. Revisa DB_NAME en .env y la instalación de esta computadora. Consulta README.md antes de modificar una base existente.'
+        'La base de datos de TECNO-GEST no está instalada o está incompleta. Revisa DB_NAME en .env y la instalación de esta computadora. Consulta README.md antes de modificar una base existente.'
     };
   }
   return {
