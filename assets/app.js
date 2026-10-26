@@ -25,8 +25,14 @@
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
     );
   const today = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/El_Salvador',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+    const part = (type) => parts.find((item) => item.type === type).value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
   };
   const find = (table, id) => db[table].find((row) => String(row.id) === String(id));
   const name = (table, id) => find(table, id)?.nombre || '—';
@@ -504,13 +510,13 @@ ${esc(value)}</textarea>
         cancelar: link(route, 'Cancelar')
       });
     const filter = params.get('estado');
-    const rows = db.prestamos.filter(
-      (p) =>
-        !filter ||
-        (filter === 'Devuelto'
-          ? !!p.devuelto_en
-          : !p.devuelto_en && (filter !== 'Atrasado' || p.fecha_devolucion < today()))
-    );
+    const rows = db.prestamos.filter((p) => {
+      if (!filter) return true;
+      if (filter === 'Devuelto') return Boolean(p.devuelto_en);
+      if (p.devuelto_en) return false;
+      if (filter === 'Atrasado') return p.fecha_devolucion < today();
+      return p.fecha_devolucion >= today();
+    });
     return view('modules/prestamos/index.html#contenido', {
       link: link('prestamos', 'Nuevo préstamo', 'create', '', 'btn btn-primary'),
       opciones_estado: selectOptions(['En curso', 'Atrasado', 'Devuelto'], filter),

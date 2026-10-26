@@ -6,7 +6,7 @@ function studentService(pool) {
       `SELECT p.id, p.equipo_id, p.fecha_prestamo, p.fecha_devolucion, p.devuelto_en,
         e.codigo, e.nombre, e.marca, e.modelo,
         CONCAT(p.fecha_devolucion, 'T23:59:59-06:00') AS vence_en,
-        EXISTS(SELECT 1 FROM reportes r WHERE r.equipo_id = p.equipo_id AND r.estado_id < 4) AS falla_abierta
+        EXISTS(SELECT 1 FROM reportes r WHERE r.equipo_id = p.equipo_id AND r.instituto_id = p.instituto_id AND r.estado_id < 4) AS falla_abierta
        FROM prestamos p JOIN equipos e ON e.id = p.equipo_id AND e.instituto_id = p.instituto_id
        WHERE p.usuario_id = ? AND p.instituto_id = ? ORDER BY p.id DESC`,
       [actor.id, actor.instituto_id]
@@ -53,8 +53,8 @@ function studentService(pool) {
       if (!loans.length) throw fail('El préstamo no está activo o no pertenece a tu cuenta.', 403);
       const equipmentId = loans[0].equipo_id;
       const [open] = await connection.execute(
-        'SELECT id FROM reportes WHERE equipo_id = ? AND estado_id < 4',
-        [equipmentId]
+        'SELECT id FROM reportes WHERE equipo_id = ? AND instituto_id = ? AND estado_id < 4',
+        [equipmentId, actor.instituto_id]
       );
       if (open.length)
         throw fail(

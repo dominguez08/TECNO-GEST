@@ -4,7 +4,7 @@ module.exports = function technicianService(pool) {
     const [reports] = await pool.execute(
       `SELECT r.id,r.descripcion,r.fecha_reporte,r.estado_id,e.codigo,e.nombre,
       m.tecnico_id,m.diagnostico,m.solucion,m.fecha_inicio,m.fecha_fin,
-      EXISTS(SELECT 1 FROM prestamos p WHERE p.equipo_id=r.equipo_id AND p.devuelto_en IS NULL) AS prestado
+      EXISTS(SELECT 1 FROM prestamos p WHERE p.equipo_id=r.equipo_id AND p.instituto_id=r.instituto_id AND p.devuelto_en IS NULL) AS prestado
       FROM reportes r JOIN equipos e ON e.id=r.equipo_id AND e.instituto_id=r.instituto_id
       LEFT JOIN mantenimientos m ON m.reporte_id=r.id AND m.instituto_id=r.instituto_id
       WHERE r.instituto_id=? ORDER BY r.id DESC`,
@@ -51,8 +51,8 @@ module.exports = function technicianService(pool) {
       if (!report) throw fail('El reporte no pertenece a tu instituto.', 404);
       if (Number(report.estado_id) >= 4) throw fail('El reporte ya está finalizado.', 409);
       const [loans] = await connection.execute(
-        'SELECT id FROM prestamos WHERE equipo_id=? AND devuelto_en IS NULL',
-        [report.equipo_id]
+        'SELECT id FROM prestamos WHERE equipo_id=? AND instituto_id=? AND devuelto_en IS NULL',
+        [report.equipo_id, actor.instituto_id]
       );
       if (loans.length)
         throw fail(

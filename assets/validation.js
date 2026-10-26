@@ -88,10 +88,15 @@
     unique(data.usuarios, 'email');
     for (const key of ['sedes', 'ubicaciones', 'tipos_equipo']) unique(data[key], 'nombre');
     const active = new Set();
+    const validDate = (value) => {
+      if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const date = new Date(`${value}T00:00:00.000Z`);
+      return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+    };
     for (const loan of data.prestamos) {
       if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(loan.fecha_prestamo) ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(loan.fecha_devolucion) ||
+        !validDate(loan.fecha_prestamo) ||
+        !validDate(loan.fecha_devolucion) ||
         loan.fecha_devolucion < loan.fecha_prestamo
       )
         throw Error('Fechas de préstamo inválidas.');
