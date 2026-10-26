@@ -1,17 +1,13 @@
 const mysql = require('mysql2/promise');
 const { install } = require('./install-database.cjs');
+const { getDatabaseConfig } = require('../server/db-config.cjs');
 
 async function start() {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME
-  });
+  const databaseConfig = getDatabaseConfig();
+  const connection = await mysql.createConnection(databaseConfig);
   try {
     const [tables] = await connection.query('SHOW TABLES');
-    if (!tables.length) await install(connection, process.env.DB_NAME, true);
+    if (!tables.length) await install(connection, databaseConfig.database, true);
     await connection.query('SELECT revision FROM app_metadata WHERE id = 1');
   } finally {
     await connection.end();

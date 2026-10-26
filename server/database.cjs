@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const mysql = require('mysql2/promise');
 const { hashPassword, verifyPassword } = require('./security.cjs');
+const { getDatabaseConfig } = require('./db-config.cjs');
 
 const root = path.resolve(__dirname, '..');
 const tables = [
@@ -16,11 +17,7 @@ const tables = [
   'actividad'
 ];
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || '127.0.0.1',
-  port: Number(process.env.DB_PORT || 3307),
-  user: process.env.DB_USER || 'inventic_app',
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME || 'inventic_html',
+  ...getDatabaseConfig(),
   dateStrings: true,
   decimalNumbers: true,
   connectionLimit: 5
