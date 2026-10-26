@@ -51,8 +51,9 @@
     return String(e.estado || 'Activo').trim();
   };
   const status = (e) => {
+    if (activeLoan(e.id)) return 'Prestado';
     if (openReport(e.id) || equipmentState(e) === 'En Mantenimiento') return 'En Mantenimiento';
-    return activeLoan(e.id) ? 'Prestado' : equipmentState(e);
+    return equipmentState(e);
   };
   const available = (e) => status(e) === 'Activo' && !activeLoan(e.id) && !openReport(e.id);
   const badge = (value) => html`

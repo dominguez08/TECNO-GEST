@@ -238,6 +238,7 @@ const root = path.resolve(__dirname, '..');
     await api('data', 'PUT', { data: stale }, admin.cookie, 409);
     const fresh = (await api('data', 'GET', null, admin.cookie)).data;
     validate(fresh);
+    assert.equal(fresh.equipos.find((e) => e.id === 1).estado, 'Activo');
     assert.equal(fresh.reportes[0].usuario_id, alice.data.user.id);
     await api('data', 'PUT', { data: fresh }, admin.cookie);
     const reportId = fresh.reportes[0].id;

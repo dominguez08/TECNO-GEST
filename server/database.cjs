@@ -62,13 +62,18 @@ async function loadData(actor, connection = pool) {
       .filter((report) => Number(report.estado_id) < 4)
       .map((report) => String(report.equipo_id))
   );
+  const activeLoans = new Set(
+    data.prestamos.filter((loan) => !loan.devuelto_en).map((loan) => String(loan.equipo_id))
+  );
   for (const equipment of data.equipos) {
     const rawState = String(equipment.estado || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase();
-    if (openMaintenance.has(String(equipment.id)) || /manten|repar/.test(rawState)) {
+    if (activeLoans.has(String(equipment.id))) {
+      equipment.estado = 'Activo';
+    } else if (openMaintenance.has(String(equipment.id)) || /manten|repar/.test(rawState)) {
       equipment.estado = 'En Mantenimiento';
     } else if (/inactiv|fuera de servicio/.test(rawState)) {
       equipment.estado = 'Inactivo';
