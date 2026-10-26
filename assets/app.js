@@ -38,8 +38,23 @@
     db.prestamos.find((p) => String(p.equipo_id) === String(id) && !p.devuelto_en);
   const openReport = (id) =>
     db.reportes.find((r) => String(r.equipo_id) === String(id) && Number(r.estado_id) < 4);
-  const available = (e) => e.estado === 'Activo' && !activeLoan(e.id) && !openReport(e.id);
-  const status = (e) => (activeLoan(e.id) ? 'Prestado' : e.estado);
+  const equipmentState = (e) => {
+    const rawState = String(e.estado || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+    if (/manten|repar/.test(rawState)) return 'En Mantenimiento';
+    if (/inactiv|fuera de servicio/.test(rawState)) return 'Inactivo';
+    if (/activ|disponible/.test(rawState)) return 'Activo';
+    if (/prest/.test(rawState)) return 'Prestado';
+    return String(e.estado || 'Activo').trim();
+  };
+  const status = (e) => {
+    if (openReport(e.id) || equipmentState(e) === 'En Mantenimiento') return 'En Mantenimiento';
+    return activeLoan(e.id) ? 'Prestado' : equipmentState(e);
+  };
+  const available = (e) => status(e) === 'Activo' && !activeLoan(e.id) && !openReport(e.id);
   const badge = (value) => html`
     <span class="status-badge status-${esc(value.replaceAll(' ', '-'))}">
       ${esc(value === 'Activo' ? 'Disponible' : value)}
@@ -287,7 +302,7 @@ ${esc(value)}</textarea>
     );
     return html`
       <div class="metric-grid">
-        ${metric(equipment.length, 'Equipos registrados', 'purple')}${metric(equipment.filter(available).length, 'Disponibles', 'green')}${metric(loans.length, 'Préstamos activos', 'amber')}${metric(equipment.filter((e) => e.estado === 'En Mantenimiento').length, 'En mantenimiento', 'red')}
+        ${metric(equipment.length, 'Equipos registrados', 'purple')}${metric(equipment.filter(available).length, 'Disponibles', 'green')}${metric(loans.length, 'Préstamos activos', 'amber')}${metric(equipment.filter((e) => status(e) === 'En Mantenimiento').length, 'En mantenimiento', 'red')}
       </div>
       <div class="panel-grid">
         <section class="surface">
@@ -361,7 +376,7 @@ ${esc(value)}</textarea>
           opciones_responsable_id: selectOptions(db.usuarios, e.responsable_id),
           opciones_estado: selectOptions(
             ['Activo', 'Inactivo', 'En Mantenimiento'],
-            e.estado || 'Activo'
+            equipmentState(e)
           ),
           fecha_adquisicion: esc(e.fecha_adquisicion),
           precio: esc(e.precio),
@@ -561,7 +576,7 @@ ${esc(value)}</textarea>
             esc(name('sedes', l.sede_id)),
             eq.length,
             eq.filter(available).length,
-            eq.filter((e) => e.estado === 'En Mantenimiento').length,
+            eq.filter((e) => status(e) === 'En Mantenimiento').length,
             html`
               <div class="table-action">
                 ${link('ubicaciones', 'Editar', 'edit', l.id)}${isAdmin() ? button('Eliminar', 'delete-ubicacion', l.id) : ''}
@@ -581,7 +596,7 @@ ${esc(value)}</textarea>
             db.equipos
               .filter(
                 (e) =>
-                  ['Activo', 'En Mantenimiento'].includes(e.estado) &&
+                  ['Activo', 'En Mantenimiento'].includes(status(e)) &&
                   !activeLoan(e.id) &&
                   !openReport(e.id)
               )

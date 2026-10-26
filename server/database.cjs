@@ -57,6 +57,25 @@ async function loadData(actor, connection = pool) {
       return row;
     });
   }
+  const openMaintenance = new Set(
+    data.reportes
+      .filter((report) => Number(report.estado_id) < 4)
+      .map((report) => String(report.equipo_id))
+  );
+  for (const equipment of data.equipos) {
+    const rawState = String(equipment.estado || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+    if (openMaintenance.has(String(equipment.id)) || /manten|repar/.test(rawState)) {
+      equipment.estado = 'En Mantenimiento';
+    } else if (/inactiv|fuera de servicio/.test(rawState)) {
+      equipment.estado = 'Inactivo';
+    } else if (/activ|disponible/.test(rawState)) {
+      equipment.estado = 'Activo';
+    }
+  }
   const [settings] = await connection.execute(
     'SELECT clave, valor FROM configuracion WHERE instituto_id = ?',
     [actor.instituto_id]
