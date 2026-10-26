@@ -660,13 +660,33 @@ ${esc(value)}</textarea>
         }
       );
     }
-    const rows = db.reportes.filter(
+    const reportRows = db.reportes.filter(
       (r) =>
         (isStaff() || String(r.usuario_id) === String(user.id)) &&
         (!params.get('estado_id') || String(r.estado_id) === params.get('estado_id')) &&
         (!params.get('desde') || r.fecha_reporte.slice(0, 10) >= params.get('desde')) &&
         (!params.get('hasta') || r.fecha_reporte.slice(0, 10) <= params.get('hasta'))
     );
+    const equipmentRows =
+      maintenance && !params.get('estado_id') && !params.get('desde') && !params.get('hasta')
+        ? db.equipos
+            .filter(
+              (equipment) =>
+                status(equipment) === 'En Mantenimiento' &&
+                !db.reportes.some(
+                  (report) =>
+                    String(report.equipo_id) === String(equipment.id) &&
+                    Number(report.estado_id) < 4
+                )
+            )
+            .map((equipment) => ({
+              equipmentOnly: true,
+              equipo_id: equipment.id,
+              descripcion: equipment.observaciones || 'Sin reporte de falla asociado.',
+              fecha_reporte: ''
+            }))
+        : [];
+    const rows = [...reportRows, ...equipmentRows];
     return view(
       'modules/' + (maintenance ? 'mantenimiento' : 'reportes') + '/index.html#contenido',
       {
@@ -690,9 +710,11 @@ ${esc(value)}</textarea>
             .map((r) => [
               esc(eqName(r.equipo_id)),
               esc(r.descripcion),
-              esc(r.fecha_reporte.slice(0, 10)),
-              badge(states[r.estado_id - 1]),
-              link(route, 'Ver seguimiento', 'view', r.id)
+              r.equipmentOnly ? '—' : esc(r.fecha_reporte.slice(0, 10)),
+              r.equipmentOnly ? badge('En Mantenimiento') : badge(states[r.estado_id - 1]),
+              r.equipmentOnly
+                ? link('equipos', 'Ver equipo', 'view', r.equipo_id)
+                : link(route, 'Ver seguimiento', 'view', r.id)
             ])
         )
       }
